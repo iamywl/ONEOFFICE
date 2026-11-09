@@ -1,0 +1,230 @@
+//! Integrated Frosted Glass Studio shell combining HWPX, DOCX, XLSX, PPTX, and PDF.
+
+use egui::{Color32, RichText, Ui};
+use serde::{Deserialize, Serialize};
+
+use crate::diagram_widget::DiagramWidget;
+use crate::formula_hud::FormulaHudWidget;
+use crate::pdf_widget::PdfViewerWidget;
+use crate::theme::StudioTheme;
+
+/// Active document type loaded in the studio.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub enum ActiveDocumentKind {
+    #[default]
+    Hwpx,
+    Docx,
+    Xlsx,
+    Pptx,
+    Pdf,
+}
+
+/// Unified ONEOFFICE Studio application state.
+#[derive(Default)]
+pub struct StudioApp {
+    pub theme: StudioTheme,
+    pub active_doc: ActiveDocumentKind,
+    pub formula_hud: FormulaHudWidget,
+    pub diagram_widget: DiagramWidget,
+    pub pdf_widget: PdfViewerWidget,
+    pub document_title: String,
+    pub zoom_pct: u32,
+    pub status_text: String,
+}
+
+impl StudioApp {
+    /// Creates a newly initialized studio app with default sample Korean contract and proposal.
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            theme: StudioTheme::Dark,
+            active_doc: ActiveDocumentKind::Hwpx,
+            formula_hud: FormulaHudWidget::new("C4", "=SUM(B2:B3)"),
+            diagram_widget: DiagramWidget::default(),
+            pdf_widget: PdfViewerWidget::new(),
+            document_title: "2026 차세대 사업계획서 및 표준용역계약서.hwpx".to_string(),
+            zoom_pct: 100,
+            status_text: "ONEOFFICE Pure-Rust Engine Ready (Zero COM · 100% Native)".to_string(),
+        }
+    }
+
+    /// Pre-frame context configuration (applies visuals and font definitions).
+    pub fn logic(&mut self, ctx: &egui::Context) {
+        self.theme.apply(ctx);
+    }
+
+    /// Renders the entire Frosted Glass studio interface into the target `Ui`.
+    pub fn show(&mut self, ui: &mut Ui) {
+        ui.vertical(|ui| {
+            // 1. Top Header Glass Bar
+            self.show_header(ui);
+            ui.separator();
+
+            // 2. Central Workspace Panel
+            egui::ScrollArea::both().show(ui, |ui| {
+                match self.active_doc {
+                    ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
+                        self.show_document_editor(ui);
+                    }
+                    ActiveDocumentKind::Xlsx => {
+                        self.show_spreadsheet_editor(ui);
+                    }
+                    ActiveDocumentKind::Pptx => {
+                        self.show_presentation_editor(ui);
+                    }
+                    ActiveDocumentKind::Pdf => {
+                        let ctx = ui.ctx().clone();
+                        self.pdf_widget.show(ui, &ctx);
+                    }
+                }
+            });
+
+            ui.separator();
+            // 3. Bottom Status Bar
+            self.show_status_bar(ui);
+        });
+    }
+
+    fn show_header(&mut self, ui: &mut Ui) {
+        ui.add_space(4.0);
+        ui.horizontal(|ui| {
+            ui.label(
+                RichText::new("ONEOFFICE")
+                    .strong()
+                    .color(StudioTheme::brand_accent())
+                    .size(16.0),
+            );
+
+            ui.separator();
+
+            // Document format switcher tabs
+            let docs = [
+                (ActiveDocumentKind::Hwpx, "한글 (.hwpx)"),
+                (ActiveDocumentKind::Docx, "워드 (.docx)"),
+                (ActiveDocumentKind::Xlsx, "엑셀 (.xlsx)"),
+                (ActiveDocumentKind::Pptx, "슬라이드 (.pptx)"),
+                (ActiveDocumentKind::Pdf, "PDF 뷰어/서명 (.pdf)"),
+            ];
+
+            for (kind, label) in docs {
+                let is_active = self.active_doc == kind;
+                if ui.selectable_label(is_active, label).clicked() {
+                    self.active_doc = kind;
+                }
+            }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                // Theme toggle
+                let theme_label = match self.theme {
+                    StudioTheme::Light => "🌙 다크 모드",
+                    StudioTheme::Dark => "☀ 라이트 모드",
+                };
+                if ui.button(theme_label).clicked() {
+                    self.theme = match self.theme {
+                        StudioTheme::Light => StudioTheme::Dark,
+                        StudioTheme::Dark => StudioTheme::Light,
+                    };
+                }
+
+                ui.label(
+                    RichText::new(format!("{}%", self.zoom_pct))
+                        .monospace()
+                        .size(12.0),
+                );
+            });
+        });
+        ui.add_space(4.0);
+    }
+
+    fn show_status_bar(&self, ui: &mut Ui) {
+        ui.horizontal(|ui| {
+            ui.label(
+                RichText::new("●")
+                    .color(Color32::from_rgb(16, 185, 129))
+                    .size(10.0),
+            );
+            ui.label(
+                RichText::new(&self.status_text)
+                    .size(11.0)
+                    .color(Color32::GRAY),
+            );
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                ui.label(
+                    RichText::new("Zero Panic · unsafe_code = forbid")
+                        .monospace()
+                        .size(10.0)
+                        .color(Color32::from_rgb(100, 116, 139)),
+                );
+            });
+        });
+    }
+
+    fn show_document_editor(&mut self, ui: &mut Ui) {
+        ui.vertical_centered(|ui| {
+            // Floating formula HUD
+            ui.group(|ui| {
+                self.formula_hud.show(ui);
+            });
+
+            ui.add_space(12.0);
+
+            // Paper canvas container
+            egui::Frame::canvas(ui.style())
+                .fill(StudioTheme::paper_fill())
+                .stroke(StudioTheme::paper_border())
+                .inner_margin(32.0)
+                .show(ui, |ui| {
+                    ui.set_width(620.0);
+                    ui.set_min_height(780.0);
+
+                    ui.heading(
+                        RichText::new("차세대 통합 오피스 플랫폼 기술 제안서")
+                            .color(Color32::from_rgb(15, 23, 42))
+                            .size(20.0),
+                    );
+                    ui.label(
+                        RichText::new("문서번호: ONEOFFICE-2026-RFP | 배포용 문서 복호화 지원")
+                            .color(Color32::from_rgb(100, 116, 139))
+                            .size(11.0),
+                    );
+
+                    ui.separator();
+                    ui.add_space(8.0);
+
+                    ui.label(
+                        RichText::new("1. 제안 개요 및 도식화 구성도")
+                            .strong()
+                            .color(Color32::from_rgb(15, 23, 42)),
+                    );
+
+                    // Embedded proposal infographic sub-canvas
+                    self.diagram_widget.show(ui);
+
+                    ui.add_space(16.0);
+                    ui.label(
+                        RichText::new("2. 513함수 연동 예산 수식표")
+                            .strong()
+                            .color(Color32::from_rgb(15, 23, 42)),
+                    );
+                    ui.label(
+                        RichText::new("HWPX 본문 내에서 셀을 클릭하면 상단 Formula HUD를 통해 513개 엑셀 수식을 실시간 재계산합니다.")
+                            .color(Color32::from_rgb(51, 65, 85)),
+                    );
+                });
+        });
+    }
+
+    fn show_spreadsheet_editor(&mut self, ui: &mut Ui) {
+        ui.group(|ui| {
+            self.formula_hud.show(ui);
+        });
+        ui.add_space(8.0);
+        ui.label(RichText::new("GridCraft 513함수 스프레드시트 캔버스 (L0~L7 증분 계산 그래프 연동)").strong());
+    }
+
+    fn show_presentation_editor(&mut self, ui: &mut Ui) {
+        ui.label(RichText::new("DeckCraft 180종 AutoShape & 커넥터 글루 프레젠테이션 스튜디오").strong());
+        self.diagram_widget.show(ui);
+    }
+}

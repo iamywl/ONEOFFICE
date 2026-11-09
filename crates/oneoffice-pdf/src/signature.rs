@@ -977,6 +977,13 @@ impl SignatureLayerStack {
         !self.redo_stack.is_empty()
     }
 
+    /// Clears all placed signatures and history snapshots.
+    pub fn clear(&mut self) {
+        self.active.clear();
+        self.undo_stack.clear();
+        self.redo_stack.clear();
+    }
+
     fn record_mutation(&mut self) {
         if self.undo_stack.len() >= MAX_UNDO_HISTORY {
             self.undo_stack.remove(0);
