@@ -1,0 +1,64 @@
+name: ONEOFFICE 6-Tier Empirical QA Gate & CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  empirical-qa-gate:
+    name: 6-Tier Verification Gate (macOS)
+    runs-on: macos-14
+    steps:
+      - name: Checkout ONEOFFICE (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Rust Toolchain & wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Node dependencies
+        run: |
+          npm --prefix hanul-hwpx ci || npm --prefix hanul-hwpx install
+          npm --prefix extensions/oneoffice-vscode ci || npm --prefix extensions/oneoffice-vscode install
+
+      - name: Run 6-Tier Empirical QA Gate
+        run: node scripts/qa/run-all-gates.mjs
+
+  cross-platform-build:
+    name: Native Desktop Matrix (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout ONEOFFICE
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux GUI Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxext-dev libxft-dev libxinerama-dev libxcursor-dev libxrender-dev libxfixes-dev libgl1-mesa-dev libasound2-dev libwayland-dev
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Native Desktop App
+        run: cargo build --release -p oneoffice-desktop

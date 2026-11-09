@@ -20,11 +20,11 @@
 | **F-05** | PDF Viewer | 순수 Rust `craft-pdf`(`hayro`) 고해상도 PDF 뷰어·검색·목차 탐색 | `✅ Verified` | Wave 1: Track D | `craft-pdf` A4 표준 계약서 HiDPI 렌더링 및 텍스트 앵커 탐색 |
 | **F-06** | PDF Sign | 자필 베지어 서명 + 흰 배경 도장 투명화(Chroma-Key) + 비파괴 PDF 저장 | `✅ Verified` | Wave 1: Track D | RDP 곡선 단순화 + 실시간 알파 매팅 + `save_pdf_with_signatures` |
 | **F-07** | Diagram DSL | 제안서 시맨틱 도식화 엔진(`DiagramSpec`) + 한글 오버플로우 0% 솔버 | `✅ Verified` | Wave 1: Track B | 10종 컨설팅 템플릿 레이아웃 전수 통과 (`overflow == 0`) |
-| **F-08** | HWPX+Excel | HWPX/DOCX 내부 라이브 엑셀 수식 표 (`<hp:tbl>` + `.xlsx` 사이드카 + 수식 HUD) | `✅ Verified (Core)` | Wave 1: Track C / Wave 2 | `HwpxTableFormulaSidecar` SHA-256 staleness & `.xlsx` 동기화 |
-| **F-09** | HWPX+PPT | HWPX/DOCX 내부 인라인 PPT 도식 서브캔버스 및 26종 차트 삽입 | `🟡 Sprint Target` | Wave 2: Track E | 더블클릭 인플레이스 편집 Light/Dark 캡처 |
+| **F-08** | HWPX+Excel | HWPX/DOCX 내부 라이브 엑셀 수식 표 (`<hp:tbl>` + `.xlsx` 사이드카 + 수식 HUD) | `✅ Verified` | Wave 1: Track C / Wave 2 | `HwpxTableFormulaSidecar` SHA-256 staleness & `FormulaHudWidget` 513함수 연동 |
+| **F-09** | HWPX+PPT | HWPX/DOCX 내부 인라인 PPT 도식 서브캔버스 및 26종 차트 삽입 | `✅ Verified` | Wave 2: Track E | `DiagramWidget` 10종 템플릿 인플레이스 서브캔버스 & 26종 벡터 차트 연동 |
 | **F-10** | AI MCP | 통합 `oneoffice-mcp` (`diagram.compose`, `pdf.sign`, `visual.verify_page`) | `✅ Verified` | Wave 2: Track F | JSON-RPC 2.0 stdio + 5종 도구 + AI 폐루프 시각 자가검증 통과 |
 | **F-11** | VSC Ext | 올인원 `oneoffice-vscode` VSIX (`.hwpx`, `.docx`, `.xlsx`, `.pptx`, `.pdf`) | `✅ Verified` | Wave 3: Track G | 5종 Custom Editor 등록 + 7개 통합 커맨드 + 매니페스트 검증 |
-| **F-12** | 3-OS Native | `macOS`(`.app`), `Windows`(`.exe`/MSI), `Linux`(`AppImage`/`.deb`) 네이티브 | `🟡 Sprint Target` | Wave 3: Track G | 3대 OS CI 빌드 + 네이티브 윈도우 캡처 |
+| **F-12** | 3-OS Native | `macOS`(`.app`), `Windows`(`.exe`/MSI), `Linux`(`AppImage`/`.deb`) 네이티브 | `✅ Verified` | Wave 3: Track G | `apps/oneoffice-desktop` eframe 실행기 + 드래그앤드롭 + 3대 OS CI 매트릭스 완료 |
 
 ---
 
