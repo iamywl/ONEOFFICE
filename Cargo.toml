@@ -1,0 +1,121 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "apps/*"]
+exclude = ["OPEN_EXCELL", "OPEN_WORD", "OPEN_PPTX", "hanul-hwpx"]
+
+[workspace.package]
+version = "0.1.0-alpha.1"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.95"
+repository = "https://github.com/iamywl/ONEOFFICE"
+
+[workspace.dependencies]
+# Internal ONEOFFICE unified crates
+oneoffice-bridge = { path = "crates/oneoffice-bridge" }
+oneoffice-diagram = { path = "crates/oneoffice-diagram" }
+oneoffice-hwpx-core = { path = "crates/oneoffice-hwpx-core" }
+oneoffice-pdf = { path = "crates/oneoffice-pdf" }
+oneoffice-ui = { path = "crates/oneoffice-ui" }
+oneoffice-mcp = { path = "crates/oneoffice-mcp" }
+
+# Submodule engine crates (GridCraft & WordCraft)
+gridcraft-core = { path = "OPEN_EXCELL/crates/core" }
+gridcraft-numfmt = { path = "OPEN_EXCELL/crates/numfmt" }
+gridcraft-formula = { path = "OPEN_EXCELL/crates/formula" }
+gridcraft-functions = { path = "OPEN_EXCELL/crates/functions" }
+gridcraft-model = { path = "OPEN_EXCELL/crates/model" }
+gridcraft-calc = { path = "OPEN_EXCELL/crates/calc" }
+gridcraft-xlsx = { path = "OPEN_EXCELL/crates/xlsx" }
+gridcraft-chart = { path = "OPEN_EXCELL/crates/chart" }
+gridcraft-engine = { path = "OPEN_EXCELL/crates/engine" }
+
+wordcraft-geom = { path = "OPEN_WORD/crates/geom" }
+wordcraft-doc = { path = "OPEN_WORD/crates/doc" }
+wordcraft-fonts = { path = "OPEN_WORD/crates/fonts" }
+wordcraft-layout = { path = "OPEN_WORD/crates/layout" }
+wordcraft-docx = { path = "OPEN_WORD/crates/docx" }
+wordcraft-render = { path = "OPEN_WORD/crates/render" }
+wordcraft-pdf = { path = "OPEN_WORD/crates/pdf" }
+wordcraft-engine = { path = "OPEN_WORD/crates/engine" }
+
+# Pure-Rust PDF stack (hayro + krilla, MIT OR Apache-2.0)
+craft-pdf = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0", version = "=0.1.0", default-features = false, features = ["read", "interpret", "raster", "write", "write-pdf"] }
+hayro-syntax = "=0.7.2"
+hayro-interpret = { version = "=0.7.0", default-features = false, features = ["embed-fonts", "embed-cmaps"] }
+hayro = { version = "=0.7.1", default-features = false, features = ["embed-fonts", "embed-cmaps"] }
+krilla = "0.8.2"
+
+# Foundation & geometry
+thiserror = "2"
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = { version = "1", features = ["float_roundtrip"] }
+log = "0.4"
+chrono = { version = "0.4.45", default-features = false, features = ["std"] }
+kurbo = { version = "0.13", features = ["serde"] }
+skrifa = "0.47"
+harfrust = "0.13"
+unicode-segmentation = "1"
+unicode-linebreak = "0.1"
+regex = { version = "1", default-features = false, features = ["std", "unicode", "perf"] }
+quick-xml = "0.41"
+zip = { version = "3", default-features = false, features = ["deflate"] }
+sha2 = "0.11"
+base64 = "0.23"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+vello_cpu = "0.2"
+
+# UI (Cross-platform native & headless kittest)
+egui = "0.37"
+egui_extras = { version = "0.37", default-features = false }
+eframe = { version = "0.37", default-features = false, features = ["wgpu", "default_fonts"] }
+egui_kittest = { version = "0.37", features = ["wgpu", "snapshot"] }
+rfd = "0.17"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+dbg_macro = "warn"
+too_many_arguments = "allow"
+type_complexity = "allow"
+
+[profile.dev.package."*"]
+opt-level = 2
+debug = false
+
+[profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+debug = 0
+
+[patch.crates-io]
+krilla = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-interpret = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-syntax = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-jbig2 = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-cmap = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+hayro-postscript = { git = "https://github.com/storytold/craft-libs", rev = "92d392cff132eaf53e13afff77f38b5c11b73aa0" }
+ecolor = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+emath = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+epaint = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+epaint_default_fonts = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui-winit = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui-wgpu = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_extras = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+egui_kittest = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+eframe = { git = "https://github.com/storytold/egui.git", rev = "6d518fc799681571963842f95b55a6b68431b15a" }
+winit = { git = "https://github.com/storytold/winit.git", rev = "a517b3846ee8457d84ee4975110bfda6797c44dc" }

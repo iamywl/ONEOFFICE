@@ -1,0 +1,47 @@
+# ONEOFFICE 실측 검증 및 애자일 캡처 추적 매트릭스 (`QA_VERIFICATION_MATRIX.md`)
+
+> **관리 책임**: `01-chief-planner` & `09-adversarial-qa-auditor`  
+> **판정 기준**:
+> - `✅ Verified`: 코드 구현 + 자동화 테스트 + 라운드트립 무결성 + 라이트/다크 실측 스크린샷 증명 완료
+> - `🟢 Sub-Engine Ready`: 개별 하위 엔진(`hanul-hwpx`, `OPEN_WORD`, `OPEN_EXCELL`, `OPEN_PPTX`)에 구현·검증 완료되었으며 통합 연결 대기 중
+> - `🟡 Sprint Target`: 통합 아키텍처 설계 완료, 해당 애자일 스프린트에서 구현 및 캡처 검증 예정
+> - `🔴 Bug / Blocked`: 결함 확인됨 (수정 및 회귀 테스트 필수)
+
+---
+
+## 1. 핵심 기능 통합 및 검증 현황판
+
+| ID | 도메인 | 기능 명세 | 현재 상태 | 병렬 트랙 (Wave & Track) | 필수 검증 증거 (Gate) |
+| :--- | :--- | :--- | :---: | :---: | :--- |
+| **F-01** | HWPX/HWP | HWPX/HWP/배포용(AES-128) 열람·편집 및 한컴 단축키(`F5`, `M`, `S` 등) | `🟢 Sub-Engine Ready` | Wave 0 | `hanul-hwpx/scripts/verify-hwp-editing.mjs` |
+| **F-02** | HWPX Core | `hanul-hwpx` OWPML/HWP 기존 버그 6건 수정 (`content.hpf`, `<hp:p>` 표 래핑 등) | `🔴 Bug / Blocked` | Wave 1: Track C | 신규 OWPML 스키마 단위 테스트 6종 |
+| **F-03** | Calc Core | 513개 엑셀 함수 + 증분 계산 그래프(`gridcraft-calc`) 공용 브릿지 | `🟢 Sub-Engine Ready` | Wave 1: Track A | `gridcraft-cli check` (`< 1e-9` 오차) |
+| **F-04** | Chart Core | 26종 벡터 차트 + 6종 추세선(`gridcraft-chart`) SVG/PNG/OOXML 공용화 | `🟢 Sub-Engine Ready` | Wave 1: Track A | 26종 차트 크로스 포맷 렌더링 스냅샷 |
+| **F-05** | PDF Viewer | 순수 Rust `craft-pdf`(`hayro`) 고해상도 PDF 뷰어·검색·목차 탐색 | `🟡 Sprint Target` | Wave 1: Track D | 한/영 혼합 PDF 렌더링 & 검색 테스트 |
+| **F-06** | PDF Sign | 자필 베지어 서명 + 흰 배경 도장 투명화 + 비파괴 PDF 저장 | `🟡 Sprint Target` | Wave 1: Track D | 서명 전후 텍스트 100% 보존 + 알파 합성 캡처 |
+| **F-07** | Diagram DSL | 제안서 시맨틱 도식화 엔진(`DiagramSpec`) + 한글 오버플로우 0% 솔버 | `🟡 Sprint Target` | Wave 1: Track B | 원페이저 도식 `overflow == 0` & `collision == 0` |
+| **F-08** | HWPX+Excel | HWPX/DOCX 내부 라이브 엑셀 수식 표 (`<hp:tbl>` + `.xlsx` 사이드카 + 수식 HUD) | `🟡 Sprint Target` | Wave 2: Track E | 수식 재계산 후 한컴/ONEOFFICE 양방향 열람 |
+| **F-09** | HWPX+PPT | HWPX/DOCX 내부 인라인 PPT 도식 서브캔버스 및 26종 차트 삽입 | `🟡 Sprint Target` | Wave 2: Track E | 더블클릭 인플레이스 편집 Light/Dark 캡처 |
+| **F-10** | AI MCP | 통합 `oneoffice-mcp` (`diagram.compose`, `pdf.sign`, `visual.verify_page`) | `🟡 Sprint Target` | Wave 2: Track F | MCP 자율 제안서 생성 + 직인 날인 E2E |
+| **F-11** | VSC Ext | 올인원 `oneoffice-vscode` VSIX (`.hwpx`, `.docx`, `.xlsx`, `.pptx`, `.pdf`) | `🟡 Sprint Target` | Wave 3: Track G | `@vscode/test-electron` 5종 포맷 E2E |
+| **F-12** | 3-OS Native | `macOS`(`.app`), `Windows`(`.exe`/MSI), `Linux`(`AppImage`/`.deb`) 네이티브 | `🟡 Sprint Target` | Wave 3: Track G | 3대 OS CI 빌드 + 네이티브 윈도우 캡처 |
+
+---
+
+## 2. 애자일 비주얼 쇼케이스 캡처 체크리스트 (README 연동)
+
+새로운 스프린트 기능이 검증될 때마다 아래 경로에 실측 Retina 스크린샷을 커밋하고 `README.md` 갤러리를 최신화합니다:
+
+### 현재 확보된 하위 엔진 실측 캡처 (Verified Baseline)
+- [x] **HWPX 위지윅 에디터 & 플로팅 글래스 표 HUD**: `hanul-hwpx/docs/assets/screenshots/10_table_floating_glass_hud.png`
+- [x] **HWPX 라이트/다크 듀얼 테마 격리**: `hanul-hwpx/docs/assets/screenshots/page_setup_dark_mode_fixed.png`
+- [x] **Word 네이티브 글래스 UI & 직인(`BehindText`) 합성**: `OPEN_WORD/qa_real_macos_native_window_stamp_behind.png`
+- [x] **Excel 수식 자동완성 & 차트 스튜디오**: `OPEN_EXCELL/docs/images/qa_proof_macos_insert_chart.png`
+- [x] **PPTX 네이티브/WASM 슬라이드 & 도형 포맷 스튜디오**: `OPEN_PPTX/assets/images/native-glass-app.png`
+
+### 병렬 트랙별 실측 캡처 목표 (Upcoming Agile Proof Slots)
+- [ ] `docs/assets/qa/wave1_pdf_viewer_signature_light.png` & `_dark.png`: (Track D) PDF 뷰어 내 자필 서명 및 흰 배경 제거 도장 날인 화면
+- [ ] `docs/assets/qa/wave1_hwpx_proposal_diagram.png`: (Track B & C) `.hwpx` 제안서 내 `DiagramSpec` 원페이저 도식 렌더링 화면
+- [ ] `docs/assets/qa/wave2_inplace_excel_hud_in_hwpx.png`: (Track E) `.hwpx` 표 위에서 엑셀 수식바(`=SUM`) 및 연동 차트가 동시 동작하는 화면
+- [ ] `docs/assets/qa/wave2_mcp_agent_autopilot.png`: (Track F) AI 에이전트가 `oneoffice-mcp`로 생성·검증·날인 완료한 제안서 결과물
+- [ ] `docs/assets/qa/wave3_vscode_5formats_split.png`: (Track G) 단일 VS Code 창에서 HWPX · XLSX · PDF 서명을 분할 탭으로 동시에 연 화면

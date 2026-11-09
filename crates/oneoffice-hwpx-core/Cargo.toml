@@ -1,0 +1,19 @@
+[package]
+name = "oneoffice-hwpx-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Lossless KS X 6101 OWPML (.hwpx) compound object engine with Excel sidecars, 26-type charts, diagrams, and SHA-256 reconciliation"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+quick-xml = { workspace = true }
+zip = { workspace = true }
+sha2 = { workspace = true }
+base64 = { workspace = true }
+image = { workspace = true }

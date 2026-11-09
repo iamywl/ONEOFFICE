@@ -1,0 +1,46 @@
+name: Bug Report (버그 제보)
+description: HWPX, DOCX, XLSX, PPTX, PDF 서명, VS Code 확장, 데스크톱 앱 또는 MCP 관련 오류를 제보합니다.
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: dropdown
+    id: domain
+    attributes:
+      label: 관련 문서 포맷 / 모듈 (Affected Module)
+      options:
+        - "HWPX / HWP (hanul-hwpx & oneoffice-hwpx-core)"
+        - "DOCX / Word (OPEN_WORD)"
+        - "XLSX / Calc & Chart (OPEN_EXCELL)"
+        - "PPTX / Proposal Diagram (OPEN_PPTX & oneoffice-diagram)"
+        - "PDF Viewer & Signature (oneoffice-pdf)"
+        - "Unified MCP Server (oneoffice-mcp)"
+        - "VS Code Extension / Native Desktop Packaging"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 실행 환경 (OS & Runtime)
+      options:
+        - "macOS (Native App)"
+        - "Windows (Native App)"
+        - "Linux (Native App)"
+        - "VS Code / Antigravity Extension"
+        - "Headless CLI / MCP Server"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 재현 방법 (Steps to Reproduce)
+      placeholder: |
+        1. 샘플 문서 열기 (...)
+        2. 표 수식 입력 또는 PDF 도장 삽입 클릭 (...)
+        3. 저장 후 재열기 시 발생한 현상 (...)
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 스크린샷 / 에러 로그 (Screenshots & Logs)
+      description: 레이아웃 깨짐이나 다크/라이트 테마 가독성 이슈인 경우 캡처 이미지를 첨부해 주세요. (민감 정보가 없는 공개 가능 샘플만 첨부)

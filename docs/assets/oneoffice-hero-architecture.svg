@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 540" width="100%" height="auto" role="img" aria-label="ONEOFFICE Unified Architecture">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B1120"/>
+      <stop offset="55%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#111C35"/>
+    </linearGradient>
+    <linearGradient id="accentBlue" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="cardGlass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.92"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.96"/>
+    </linearGradient>
+    <linearGradient id="coreGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1D4ED8" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#0EA5E9" stop-opacity="0.18"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="540" rx="20" fill="url(#bgGrad)" stroke="#334155" stroke-width="1.5"/>
+
+  <!-- Header -->
+  <rect x="44" y="30" width="142" height="28" rx="14" fill="#1E3A8A" stroke="#3B82F6" stroke-width="1"/>
+  <text x="115" y="49" text-anchor="middle" fill="#93C5FD" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="12" font-weight="700">ALL-IN-ONE OFFICE</text>
+  <text x="202" y="50" fill="#F8FAFC" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="24" font-weight="800">ONEOFFICE</text>
+  <text x="362" y="49" fill="#94A3B8" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="500">HWPX · Word · Excel · PowerPoint · PDF Sign + AI Agent (MCP)</text>
+
+  <!-- Left Column: 5 Document Formats -->
+  <text x="52" y="96" fill="#64748B" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700" letter-spacing="1.2">5 NATIVE DOCUMENT ENGINES</text>
+
+  <!-- Format 1: HWPX / HWP -->
+  <rect x="44" y="110" width="280" height="68" rx="12" fill="url(#cardGlass)" stroke="#0EA5E9" stroke-width="1.2"/>
+  <rect x="58" y="124" width="46" height="40" rx="8" fill="#0284C7"/>
+  <text x="81" y="149" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-size="12" font-weight="800">HWPX</text>
+  <text x="116" y="139" fill="#F8FAFC" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">한글 (HWPX / HWP / HML)</text>
+  <text x="116" y="159" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="11.5">KS X 6101 · 배포용 복호화 · F5 단축키</text>
+
+  <!-- Format 2: DOCX -->
+  <rect x="44" y="188" width="280" height="68" rx="12" fill="url(#cardGlass)" stroke="#3B82F6" stroke-width="1.2"/>
+  <rect x="58" y="202" width="46" height="40" rx="8" fill="#2563EB"/>
+  <text x="81" y="227" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-size="12" font-weight="800">DOCX</text>
+  <text x="116" y="217" fill="#F8FAFC" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">워드 (DOCX / DOC / ODT)</text>
+  <text x="116" y="237" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="11.5">다단 조판 · 직인 레이어링 · Tagged PDF</text>
+
+  <!-- Format 3: XLSX -->
+  <rect x="44" y="266" width="280" height="68" rx="12" fill="url(#cardGlass)" stroke="#10B981" stroke-width="1.2"/>
+  <rect x="58" y="280" width="46" height="40" rx="8" fill="#059669"/>
+  <text x="81" y="305" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-size="12" font-weight="800">XLSX</text>
+  <text x="116" y="295" fill="#F8FAFC" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">엑셀 (XLSX / XLS / CSV)</text>
+  <text x="116" y="315" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="11.5">513개 함수 · 증분 계산 · 26종 벡터 차트</text>
+
+  <!-- Format 4: PPTX -->
+  <rect x="44" y="344" width="280" height="68" rx="12" fill="url(#cardGlass)" stroke="#F59E0B" stroke-width="1.2"/>
+  <rect x="58" y="358" width="46" height="40" rx="8" fill="#D97706"/>
+  <text x="81" y="383" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-size="12" font-weight="800">PPTX</text>
+  <text x="116" y="373" fill="#F8FAFC" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">프레젠테이션 &amp; 도식화</text>
+  <text x="116" y="393" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="11.5">180종 도형 · 커넥터 글루 · 제안서 DSL</text>
+
+  <!-- Format 5: PDF -->
+  <rect x="44" y="422" width="280" height="68" rx="12" fill="url(#cardGlass)" stroke="#F43F5E" stroke-width="1.2"/>
+  <rect x="58" y="436" width="46" height="40" rx="8" fill="#E11D48"/>
+  <text x="81" y="461" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-size="12" font-weight="800">PDF</text>
+  <text x="116" y="451" fill="#F8FAFC" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">PDF 뷰어 &amp; 전자서명/직인</text>
+  <text x="116" y="471" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="11.5">자필 베지어 서명 · 도장 배경 투명화 날인</text>
+
+  <!-- Connectors Left -> Center -->
+  <path d="M324 144 L392 220 M324 222 L392 255 M324 300 L392 295 M324 378 L392 335 M324 456 L392 375" stroke="#475569" stroke-width="1.8" stroke-dasharray="4 4" fill="none"/>
+
+  <!-- Center Hub: Unified Core -->
+  <rect x="392" y="110" width="416" height="380" rx="18" fill="url(#coreGlow)" stroke="#38BDF8" stroke-width="1.8"/>
+  <text x="600" y="142" text-anchor="middle" fill="#7DD3FC" font-family="sans-serif" font-size="12" font-weight="800" letter-spacing="1.4">UNIFIED RUST + WASM COMPOUND CORE</text>
+  <text x="600" y="168" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="19" font-weight="800">인플레이스(In-Place) 복합 개체 엔진</text>
+
+  <!-- Sub-box 1 -->
+  <rect x="416" y="188" width="368" height="78" rx="12" fill="#0F172A" stroke="#334155"/>
+  <text x="436" y="214" fill="#38BDF8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">1. 제안서 시맨틱 도식화 엔진 (oneoffice-diagram)</text>
+  <text x="436" y="236" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">비교 카드 · KPI 콜아웃 · 프로세스 화살표를 한글 글리프 실측으로</text>
+  <text x="436" y="253" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">글자 잘림 0% 자동 배치 → HWPX / DOCX / PPTX 네이티브 출력</text>
+
+  <!-- Sub-box 2 -->
+  <rect x="416" y="278" width="368" height="78" rx="12" fill="#0F172A" stroke="#334155"/>
+  <text x="436" y="304" fill="#34D399" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">2. 문서 내 라이브 엑셀 수식 표 &amp; 26종 벡터 차트</text>
+  <text x="436" y="326" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">HWPX/워드 표 안에서 =SUM, =XLOOKUP 즉시 계산 및 차트 바인딩</text>
+  <text x="436" y="343" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">이중 무손실 저장: 한컴/MS 호환 태그 + 재편집 수식 사이드카</text>
+
+  <!-- Sub-box 3 -->
+  <rect x="416" y="368" width="368" height="98" rx="12" fill="#0F172A" stroke="#334155"/>
+  <text x="436" y="394" fill="#FB7185" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">3. 비파괴 PDF 뷰어 · 서명 날인 &amp; AI 비주얼 자가검증</text>
+  <text x="436" y="416" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">craft-pdf (hayro + krilla) 순수 Rust · GPL/AGPL 무오염</text>
+  <text x="436" y="435" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">흰 배경 도장 투명화 · '(인)' 위치 자동 날인 · 레이아웃 BBox 검증</text>
+  <text x="436" y="453" fill="#94A3B8" font-family="sans-serif" font-size="11">unsafe_code = "forbid"  |  Zero Panics  |  WCAG AAA Dual-Theme</text>
+
+  <!-- Connectors Center -> Right -->
+  <path d="M808 210 L876 168 M808 300 L876 300 M808 390 L876 432" stroke="#38BDF8" stroke-width="2" fill="none"/>
+
+  <!-- Right Column: 3 Runtime Surfaces -->
+  <text x="884" y="96" fill="#64748B" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" font-weight="700" letter-spacing="1.2">3 UNIFIED RUNTIMES</text>
+
+  <!-- Runtime 1: Native Desktop -->
+  <rect x="876" y="114" width="280" height="108" rx="14" fill="url(#cardGlass)" stroke="#60A5FA" stroke-width="1.4"/>
+  <text x="898" y="144" fill="#93C5FD" font-family="sans-serif" font-size="11" font-weight="700">CROSS-PLATFORM NATIVE APP</text>
+  <text x="898" y="168" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="16" font-weight="800">macOS · Windows · Linux</text>
+  <text x="898" y="191" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">Metal / DX12 / Vulkan GPU 가속</text>
+  <text x="898" y="209" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="11.5">한컴/오피스 미설치 PC 100% 독립 구동</text>
+
+  <!-- Runtime 2: VS Code Extension -->
+  <rect x="876" y="246" width="280" height="108" rx="14" fill="url(#cardGlass)" stroke="#38BDF8" stroke-width="1.4"/>
+  <text x="898" y="276" fill="#7DD3FC" font-family="sans-serif" font-size="11" font-weight="700">UNIFIED IDE EXTENSION</text>
+  <text x="898" y="300" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="16" font-weight="800">VS Code / Antigravity VSIX</text>
+  <text x="898" y="323" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">단일 확장으로 5대 포맷 오프라인 편집</text>
+  <text x="898" y="341" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="11.5">코드와 제안서·엑셀·PDF 날인을 한 창에서</text>
+
+  <!-- Runtime 3: MCP AI Agent -->
+  <rect x="876" y="378" width="280" height="112" rx="14" fill="url(#cardGlass)" stroke="#A78BFA" stroke-width="1.4"/>
+  <text x="898" y="408" fill="#C4B5FD" font-family="sans-serif" font-size="11" font-weight="700">AI AGENT PROTOCOL</text>
+  <text x="898" y="432" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="16" font-weight="800">oneoffice-mcp 서버</text>
+  <text x="898" y="455" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">diagram.compose · table/chart.upsert</text>
+  <text x="898" y="473" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="11.5">pdf.sign · visual.verify_page 폐루프 검증</text>
+</svg>

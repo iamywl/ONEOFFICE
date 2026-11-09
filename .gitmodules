@@ -1,0 +1,12 @@
+[submodule "hanul-hwpx"]
+	path = hanul-hwpx
+	url = https://github.com/iamywl/hanul-hwpx.git
+[submodule "OPEN_WORD"]
+	path = OPEN_WORD
+	url = https://github.com/iamywl/OPEN_WORD.git
+[submodule "OPEN_EXCELL"]
+	path = OPEN_EXCELL
+	url = https://github.com/iamywl/OPEN_EXCELL.git
+[submodule "OPEN_PPTX"]
+	path = OPEN_PPTX
+	url = https://github.com/iamywl/OPEN_PPTX.git

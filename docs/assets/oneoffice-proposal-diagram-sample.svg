@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1120" width="100%" height="auto" role="img" aria-label="ONEOFFICE Proposal Infographic Example">
+  <!-- Clean-room A4 Proposal One-Pager Vector Showcase demonstrating DiagramSpec -->
+  <rect width="900" height="1120" rx="12" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+
+  <!-- Top Running Header -->
+  <text x="48" y="42" fill="#64748B" font-family="-apple-system, 'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="13" font-weight="600">ONEOFFICE OPEN ARCHITECTURE 2026  /  CORE VISION</text>
+  <text x="852" y="42" text-anchor="end" fill="#64748B" font-family="-apple-system, 'Pretendard', sans-serif" font-size="13" font-weight="600">BACKGROUND / SOLUTION</text>
+  <line x1="48" y1="58" x2="852" y2="58" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- Section Eyebrow & Governing Title -->
+  <text x="48" y="94" fill="#0052CC" font-family="-apple-system, 'Pretendard', sans-serif" font-size="15" font-weight="800">00 / WHY ONEOFFICE</text>
+  <text x="48" y="136" fill="#0F172A" font-family="-apple-system, 'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="32" font-weight="800">제안서·보고서 도식화의 단절과 통합 필요성</text>
+  <text x="48" y="168" fill="#475569" font-family="-apple-system, 'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="15" font-weight="500">실무 제안서는 HWPX·DOCX로 제출하지만, 설득력 있는 도식화와 수식 차트를 위해 4개 프로그램을 오가야 한다.</text>
+  <text x="48" y="191" fill="#475569" font-family="-apple-system, 'Pretendard', 'Apple SD Gothic Neo', sans-serif" font-size="15" font-weight="500">문서 내부에서 엑셀 수식·PPT 도식·PDF 날인·AI MCP 편집이 하나로 동작하는 통합 엔진이 필요하다.</text>
+
+  <!-- Left Comparison Card: Problem A -->
+  <rect x="48" y="220" width="388" height="448" rx="18" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+  <rect x="72" y="246" width="66" height="28" rx="14" fill="#0F2942"/>
+  <text x="105" y="265" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5" font-weight="700">문제 A</text>
+  <text x="150" y="265" fill="#0052CC" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">작성 도구의 파편화</text>
+  <text x="72" y="308" fill="#0F172A" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="24" font-weight="800">도식·차트 편집이 너무 어렵다</text>
+
+  <!-- KPI Box A -->
+  <rect x="72" y="328" width="340" height="88" rx="14" fill="#F1F5F9"/>
+  <text x="96" y="385" fill="#0066CC" font-family="-apple-system, sans-serif" font-size="42" font-weight="800">4개 앱</text>
+  <text x="232" y="366" fill="#0F172A" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14.5" font-weight="700">제안서 1권당 평균 왕복 도구</text>
+  <text x="232" y="388" fill="#64748B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13">한글/워드 + PPT + 엑셀 + PDF</text>
+
+  <!-- Evidence Bullets A -->
+  <text x="72" y="446" fill="#64748B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13" font-weight="700">현장 병목</text>
+  <circle cx="80" cy="472" r="3.5" fill="#0066CC"/>
+  <text x="94" y="477" fill="#1E293B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13.5">문구 1줄 수정 시 도형·화살표 전체 수동 재배치</text>
+  <circle cx="80" cy="502" r="3.5" fill="#0066CC"/>
+  <text x="94" y="507" fill="#1E293B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13.5">예산표 수치 변경 시 본문 표·차트 불일치 빈발</text>
+  <circle cx="80" cy="532" r="3.5" fill="#0066CC"/>
+  <text x="94" y="537" fill="#1E293B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13.5">마감 직전 PDF 변환 후 직인 날인 재작업 반복</text>
+
+  <!-- Implication Box A -->
+  <rect x="72" y="562" width="340" height="84" rx="14" fill="#E0F2FE"/>
+  <text x="90" y="588" fill="#0284C7" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13" font-weight="800">시사점</text>
+  <text x="90" y="611" fill="#0F172A" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">본문 캔버스 안에서 엑셀 수식과 PPT 도식이</text>
+  <text x="90" y="632" fill="#0F172A" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">네이티브 복합 개체로 즉시 동작해야 한다.</text>
+
+  <!-- Right Comparison Card: Problem B -->
+  <rect x="464" y="220" width="388" height="448" rx="18" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/>
+  <rect x="488" y="246" width="66" height="28" rx="14" fill="#0F2942"/>
+  <text x="521" y="265" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5" font-weight="700">문제 B</text>
+  <text x="566" y="265" fill="#0052CC" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">캡처 이미지 &amp; AI 단절</text>
+  <text x="488" y="308" fill="#0F172A" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="24" font-weight="800">붙여넣은 그림은 죽은 데이터다</text>
+
+  <!-- KPI Box B -->
+  <rect x="488" y="328" width="340" height="88" rx="14" fill="#F1F5F9"/>
+  <text x="512" y="385" fill="#0066CC" font-family="-apple-system, sans-serif" font-size="42" font-weight="800">0%</text>
+  <text x="614" y="366" fill="#0F172A" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14.5" font-weight="700">캡처 도식의 재편집·검색성</text>
+  <text x="614" y="388" fill="#64748B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13">AI 에이전트 구조적 수정 불가</text>
+
+  <!-- Evidence Bullets B -->
+  <text x="488" y="446" fill="#64748B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13" font-weight="700">기술적 한계</text>
+  <circle cx="496" cy="472" r="3.5" fill="#0066CC"/>
+  <text x="510" y="477" fill="#1E293B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13.5">PNG 캡처 삽입 시 인쇄 화질 저하 및 본문 검색 누락</text>
+  <circle cx="496" cy="502" r="3.5" fill="#0066CC"/>
+  <text x="510" y="507" fill="#1E293B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13.5">저수준 XML 좌표 조작 시 한글 줄바꿈 넘침 발생</text>
+  <circle cx="496" cy="532" r="3.5" fill="#0066CC"/>
+  <text x="510" y="537" fill="#1E293B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13.5">OS 종속(Win32 COM) 자동화는 맥·리눅스 실행 불가</text>
+
+  <!-- Implication Box B -->
+  <rect x="488" y="562" width="340" height="84" rx="14" fill="#E0F2FE"/>
+  <text x="506" y="588" fill="#0284C7" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13" font-weight="800">시사점</text>
+  <text x="506" y="611" fill="#0F172A" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">시맨틱 도식 DSL과 폐루프 비주얼 검증을 갖춘</text>
+  <text x="506" y="632" fill="#0F172A" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="14" font-weight="700">크로스플랫폼 MCP 프로토콜이 필수적이다.</text>
+
+  <!-- Glued Vertical Flow Arrows -->
+  <line x1="242" y1="668" x2="242" y2="704" stroke="#0066CC" stroke-width="2.5"/>
+  <polygon points="242,714 235,702 249,702" fill="#0066CC"/>
+  <line x1="658" y1="668" x2="658" y2="704" stroke="#0066CC" stroke-width="2.5"/>
+  <polygon points="658,714 651,702 665,702" fill="#0066CC"/>
+
+  <!-- Bottom Dark Hero Container: Solution Architecture -->
+  <rect x="48" y="718" width="804" height="310" rx="20" fill="#0F2942"/>
+  <text x="76" y="754" fill="#7DD3FC" font-family="-apple-system, sans-serif" font-size="13" font-weight="800" letter-spacing="0.8">PLATFORM ARCHITECTURE  /  ONEOFFICE STUDIO &amp; MCP</text>
+  <text x="76" y="784" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="17" font-weight="800">ONEOFFICE는 HWPX·워드·엑셀·PPT·PDF 서명을 단일 Rust/WASM 코어와 MCP로 통합하여,</text>
+  <text x="76" y="808" fill="#E2E8F0" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="16" font-weight="600">사람과 AI 에이전트 모두가 컨설팅급 문서를 손쉽게 완성하게 하는 올인원 오피스다.</text>
+
+  <!-- Step Card 1 (Wide) -->
+  <rect x="76" y="832" width="290" height="170" rx="14" fill="#1E3A5F" stroke="#335C85"/>
+  <circle cx="102" cy="860" r="13" fill="#FFFFFF"/>
+  <text x="102" y="865" text-anchor="middle" fill="#0F2942" font-family="sans-serif" font-size="13" font-weight="800">1</text>
+  <text x="124" y="865" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="16" font-weight="800">인플레이스 수식 표 · 차트</text>
+  <text x="92" y="900" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13">• 513개 엑셀 함수 실시간 재계산</text>
+  <text x="92" y="926" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13">• 26종 벡터 차트 &amp; 6종 추세선 연동</text>
+  <text x="92" y="952" fill="#CBD5E1" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="13">• HWPX / DOCX 네이티브 무손실 저장</text>
+
+  <!-- Step Card 2 -->
+  <rect x="386" y="832" width="136" height="170" rx="14" fill="#1E3A5F" stroke="#335C85"/>
+  <circle cx="410" cy="860" r="13" fill="#FFFFFF"/>
+  <text x="410" y="865" text-anchor="middle" fill="#0F2942" font-family="sans-serif" font-size="13" font-weight="800">2</text>
+  <text x="398" y="902" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="15" font-weight="800">시맨틱 도식</text>
+  <text x="398" y="923" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="15" font-weight="800">서브캔버스</text>
+  <text x="398" y="956" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5">한글 폭 실측</text>
+  <text x="398" y="975" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5">오버플로우 제로</text>
+
+  <text x="531" y="922" text-anchor="middle" fill="#7DD3FC" font-family="sans-serif" font-size="18" font-weight="800">&gt;</text>
+
+  <!-- Step Card 3 -->
+  <rect x="540" y="832" width="136" height="170" rx="14" fill="#1E3A5F" stroke="#335C85"/>
+  <circle cx="564" cy="860" r="13" fill="#FFFFFF"/>
+  <text x="564" y="865" text-anchor="middle" fill="#0F2942" font-family="sans-serif" font-size="13" font-weight="800">3</text>
+  <text x="552" y="902" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="15" font-weight="800">PDF 뷰어 &amp;</text>
+  <text x="552" y="923" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="15" font-weight="800">직인·서명</text>
+  <text x="552" y="956" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5">배경 자동 투명화</text>
+  <text x="552" y="975" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5">비파괴 벡터 저장</text>
+
+  <text x="685" y="922" text-anchor="middle" fill="#7DD3FC" font-family="sans-serif" font-size="18" font-weight="800">&gt;</text>
+
+  <!-- Step Card 4 -->
+  <rect x="694" y="832" width="136" height="170" rx="14" fill="#1E3A5F" stroke="#335C85"/>
+  <circle cx="718" cy="860" r="13" fill="#FFFFFF"/>
+  <text x="718" y="865" text-anchor="middle" fill="#0F2942" font-family="sans-serif" font-size="13" font-weight="800">4</text>
+  <text x="706" y="902" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="15" font-weight="800">AI MCP &amp;</text>
+  <text x="706" y="923" fill="#FFFFFF" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="15" font-weight="800">3대 OS·VSC</text>
+  <text x="706" y="956" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5">맥·윈도우·리눅스</text>
+  <text x="706" y="975" fill="#94A3B8" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5">폐루프 시각 검증</text>
+
+  <!-- Bottom Footer -->
+  <text x="48" y="1060" fill="#64748B" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12">렌더링 표준  |  KS X 6101 (OWPML) · ECMA-376 (OOXML) · ISO 32000-1 (PDF 1.7) · Model Context Protocol</text>
+  <line x1="48" y1="1076" x2="852" y2="1076" stroke="#0052CC" stroke-width="2"/>
+  <text x="48" y="1098" fill="#475569" font-family="-apple-system, 'Apple SD Gothic Neo', sans-serif" font-size="12.5" font-weight="600">[ONEOFFICE DiagramSpec Showcase] 선언적 JSON 한 장으로 HWPX · DOCX · PPTX · PDF 동시 컴파일</text>
+  <text x="852" y="1098" text-anchor="end" fill="#0F172A" font-family="sans-serif" font-size="13" font-weight="800">01 / 01</text>
+</svg>

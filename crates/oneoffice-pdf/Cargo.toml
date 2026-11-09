@@ -1,0 +1,23 @@
+[package]
+name = "oneoffice-pdf"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Pure-Rust cross-platform PDF viewer, search, chroma-key stamp matting, Bezier signature, and lossless incremental PDF writer"
+
+[lints]
+workspace = true
+
+[dependencies]
+craft-pdf = { workspace = true }
+hayro-syntax = { workspace = true }
+hayro-interpret = { workspace = true }
+hayro = { workspace = true }
+krilla = { workspace = true }
+kurbo = { workspace = true }
+image = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+sha2 = { workspace = true }
+base64 = { workspace = true }

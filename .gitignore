@@ -1,0 +1,32 @@
+# OS & Editor Noise
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+
+# Rust Build Artifacts
+target/
+**/target/
+
+# Node / TypeScript Dependencies & Temp Previews
+node_modules/
+**/node_modules/
+.preview/
+**/.preview/
+out/
+
+# Large Distributable Packages & Local Installers (Reproducible via build scripts)
+*.dmg
+*.msi
+*.AppImage
+*.deb
+*.rpm
+*.flatpak
+*.hanul-backup
+artifacts/*.vsix
+extensions/oneoffice-vscode/*.vsix
+
+# Local Agent Scratch & Clean-Room Observation Captures
+plan/
+**/plan/
+/tmp/

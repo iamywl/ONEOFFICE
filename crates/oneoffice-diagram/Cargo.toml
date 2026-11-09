@@ -1,0 +1,23 @@
+[package]
+name = "oneoffice-diagram"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Semantic proposal diagramming DSL (DiagramSpec v1), 3-pass Korean layout solver, and OWPML/DrawingML/SVG/PNG compilers"
+
+[lints]
+workspace = true
+
+[dependencies]
+wordcraft-fonts = { workspace = true }
+harfrust = { workspace = true }
+skrifa = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+unicode-segmentation = { workspace = true }
+unicode-linebreak = { workspace = true }
+quick-xml = { workspace = true }
+vello_cpu = { workspace = true }
+image = { workspace = true }
+kurbo = { workspace = true }

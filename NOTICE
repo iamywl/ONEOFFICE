@@ -1,0 +1,42 @@
+ONEOFFICE
+Copyright (c) 2026 ONEOFFICE Contributors
+
+Licensed under either of:
+  * Apache License, Version 2.0 (LICENSE-APACHE or http://www.apache.org/licenses/LICENSE-2.0)
+  * MIT license (LICENSE-MIT or http://opensource.org/licenses/MIT)
+at your option.
+
+================================================================================
+Upstream & Subproject Notices
+================================================================================
+
+1. hanul-hwpx (./hanul-hwpx)
+   - Copyright (c) 2026 Hanul contributors (MIT License)
+   - Includes vendored runtime components from rhwp Studio by Edward Kim and
+     third-party open-source packages (fflate, @xmldom/xmldom, Skia CanvasKit,
+     and open-licensed Korean/Math fonts). See ./hanul-hwpx/THIRD_PARTY_NOTICES.md.
+
+2. OPEN_WORD / WordCraft (./OPEN_WORD)
+   - Derived from WordCraft (https://github.com/storytold/wordcraft)
+   - Copyright (c) 2026 ArtCraft Team and the WordCraft contributors
+   - Dual-licensed under MIT OR Apache-2.0.
+   - See ./OPEN_WORD/NOTICE and ./OPEN_WORD/ATTRIBUTION.md.
+
+3. OPEN_EXCELL / GridCraft (./OPEN_EXCELL)
+   - Derived from GridCraft (https://github.com/storytold/gridcraft)
+   - Copyright (c) 2026 ArtCraft Team and the GridCraft contributors
+   - Dual-licensed under MIT OR Apache-2.0.
+   - See ./OPEN_EXCELL/NOTICE and ./OPEN_EXCELL/ATTRIBUTION.md.
+
+4. OPEN_PPTX / DeckCraft Studio (./OPEN_PPTX)
+   - Built upon DeckCraft WASM/CLI runtime (https://github.com/storytold/deckcraft,
+     MIT OR Apache-2.0) and ONEOFFICE TypeScript VS Code Studio integration.
+
+5. Shared PDF & Rendering Foundations (storytold/craft-libs)
+   - Uses craft-pdf, hayro, and krilla (MIT OR Apache-2.0) for clean-room
+     PDF reading, rendering, and lossless writing without GPL/AGPL dependencies.
+
+Trademark Disclaimer:
+Microsoft, Word, Excel, PowerPoint, Hancom, Hangul (한글), and Adobe Acrobat
+are trademarks of their respective owners. ONEOFFICE is an independent,
+clean-room open-source project and is not affiliated with or endorsed by them.

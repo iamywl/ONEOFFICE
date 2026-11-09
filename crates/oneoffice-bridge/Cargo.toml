@@ -1,0 +1,26 @@
+[package]
+name = "oneoffice-bridge"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Unified Excel 513-formula calc, 26-type vector chart, and Korean HarfRust font bridge for ONEOFFICE"
+
+[lints]
+workspace = true
+
+[dependencies]
+gridcraft-core = { workspace = true }
+gridcraft-numfmt = { workspace = true }
+gridcraft-formula = { workspace = true }
+gridcraft-functions = { workspace = true }
+gridcraft-model = { workspace = true }
+gridcraft-calc = { workspace = true }
+gridcraft-xlsx = { workspace = true }
+gridcraft-chart = { workspace = true }
+wordcraft-fonts = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+image = { workspace = true }
+zip = { workspace = true }
+quick-xml = { workspace = true }
