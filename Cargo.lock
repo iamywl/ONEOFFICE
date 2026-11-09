@@ -2315,6 +2315,9 @@ version = "0.1.0-alpha.1"
 dependencies = [
  "base64 0.23.1",
  "image",
+ "oneoffice-bridge",
+ "oneoffice-diagram",
+ "oneoffice-pdf",
  "quick-xml",
  "serde",
  "serde_json",

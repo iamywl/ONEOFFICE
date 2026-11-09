@@ -17,3 +17,8 @@ zip = { workspace = true }
 sha2 = { workspace = true }
 base64 = { workspace = true }
 image = { workspace = true }
+oneoffice-bridge = { workspace = true }
+oneoffice-diagram = { workspace = true }
+
+[dev-dependencies]
+oneoffice-pdf = { workspace = true }

@@ -69,21 +69,31 @@
 | :---: | :---: |
 | ![OPEN_PPTX Native Studio](OPEN_PPTX/assets/images/native-glass-app.png) | ![OPEN_PPTX VS Code Webview](OPEN_PPTX/assets/images/qa-live-vscode-webview.png) |
 
+### 5. 신규 통합 코어 실측 캡처 (Wave 1: 제안서 도식화 · PDF 뷰어/직인 날인 · 26종 차트 브릿지)
+| 컨설팅급 제안서 도식화 (`oneoffice-diagram` 3-Pass 실측) | 순수 Rust PDF 뷰어 & 직인 날인 (`oneoffice-pdf` Chroma-Key) |
+| :---: | :---: |
+| ![ONEOFFICE Proposal Infographic](docs/assets/qa/wave1_hwpx_proposal_diagram.png) | ![ONEOFFICE PDF Viewer & Stamp](docs/assets/qa/wave1_pdf_viewer_signature.png) |
+
+| 26종 벡터 차트 & 513개 엑셀 수식표 브릿지 (`oneoffice-bridge`) |
+| :---: |
+| ![ONEOFFICE Chart Engine Benchmark](docs/assets/qa/wave1_excel_formula_chart.png) |
+
 ---
 
 ## ✨ 통합 기능 매트릭스
 
-> 상태 범례: `🟢 기반 엔진 탑재 완료` · `🟡 통합 스프린트 진행 중` (상세 일정: [`docs/MASTER_ARCHITECTURE_PLAN.md`](docs/MASTER_ARCHITECTURE_PLAN.md))
+> 상태 범례: `🟢 완료 및 실측 통과` · `🟡 통합 진행 중` (상세 일정: [`docs/MASTER_ARCHITECTURE_PLAN.md`](docs/MASTER_ARCHITECTURE_PLAN.md))
 
 | 영역 | 주요 기능 | 지원 포맷 / 범위 | 상태 |
 | :--- | :--- | :--- | :---: |
-| **한글 문서 엔진** | KS X 6101 `.hwpx` 위지윅 편집, 레거시 `.hwp` 및 **배포용 문서(`ViewText` AES-128) 복호화**, 한컴 단축키(`F5`, `M`, `S`, `W`, `H`, `Alt+L/T`, `F7`, `F11`) | `.hwpx`, `.hwp`, `.hml` | `🟢` |
-| **워드 조판 엔진** | 다단(1~45단)·각주·머리글/바닥글 페이지네이션, `BehindText` 직인, 수식(OMML), **Tagged 벡터 PDF 출력** | `.docx`, `.doc`, `.rtf`, `.odt`, `.md` | `🟢` |
-| **엑셀 수식 & 차트** | **513개 엑셀 함수**, Tarjan SCC 증분 재계산, 조건부 서식, 피벗, **26종 벡터 차트 + 6종 추세선** | `.xlsx`, `.xls`, `.xlsb`, `.ods`, `.csv` | `🟢` |
-| **슬라이드 & 도형** | 327개 커맨드, 180종 AutoShape, 도형 부울 병합(5종), 커넥터 글루(자동 경로 연결), SmartArt | `.pptx`, `.potx`, `.ppsx` | `🟢` |
+| **한글 문서 엔진** | KS X 6101 `.hwpx` 위지윅 편집, 레거시 `.hwp` 및 **배포용 문서(`ViewText` AES-128) 복호화**, 한컴 단축키(`F5`, `M`, `S`, `W`, `H`, `Alt+L/T`, `F7`, `F11`) | `.hwpx`, `.hwp`, `.hml` | `🟢 완료` |
+| **워드 조판 엔진** | 다단(1~45단)·각주·머리글/바닥글 페이지네이션, `BehindText` 직인, 수식(OMML), **Tagged 벡터 PDF 출력** | `.docx`, `.doc`, `.rtf`, `.odt`, `.md` | `🟢 완료` |
+| **엑셀 수식 & 차트** | **513개 엑셀 함수**, Tarjan SCC 증분 재계산, 조건부 서식, 피벗, **26종 벡터 차트 + 6종 추세선** | `.xlsx`, `.xls`, `.xlsb`, `.ods`, `.csv` | `🟢 완료` |
+| **슬라이드 & 도형** | 327개 커맨드, 180종 AutoShape, 도형 부울 병합(5종), 커넥터 글루(자동 경로 연결), SmartArt | `.pptx`, `.potx`, `.ppsx` | `🟢 완료` |
+| **시맨틱 제안서 도식화** | `DiagramSpec` 기반 비교 카드·KPI 콜아웃·프로세스 화살표 **한글 글자 잘림 0% 자동 레이아웃** (`oneoffice-diagram`) | OWPML + DrawingML + SVG + PNG | `🟢 완료` |
+| **PDF 뷰어 & 서명** | 순수 Rust(`craft-pdf`) 고속 PDF 뷰어·검색·목차 + **자필 베지어 서명, 흰 배경 도장 투명화, 비파괴 날인 저장** (`oneoffice-pdf`) | PDF 1.7 (읽기·렌더링·서명 저장) | `🟢 완료` |
+| **HWPX 복합개체 코어** | **HWPX OWPML 버그 6건 박멸**, `<hp:tbl>` 수식 사이드카, `<hp:container>` 도식화 임베딩, 필드 자동 치환 (`oneoffice-hwpx-core`) | `.hwpx` OWPML 패키징 | `🟢 완료` |
 | **인플레이스 통합 편집** | **HWPX·DOCX 내부에서 엑셀 수식 표 실시간 계산, 26종 차트 데이터 편집, PPT급 도식 서브캔버스 구동** | `.hwpx`, `.docx`, `.pptx` 공통 | `🟡 Sprint 3–4` |
-| **시맨틱 제안서 도식화** | `DiagramSpec` 기반 비교 카드·KPI 콜아웃·프로세스 화살표 **한글 글자 잘림 0% 자동 레이아웃** | OWPML + DrawingML + SVG | `🟡 Sprint 3` |
-| **PDF 뷰어 & 서명** | 순수 Rust(`craft-pdf`) 고속 PDF 뷰어·검색·목차 + **자필 베지어 서명, 흰 배경 도장 투명화, 비파괴 날인 저장** | PDF 1.7 (읽기·렌더링·서명 저장) | `🟡 Sprint 2` |
 | **3대 런타임 & MCP** | **단일 VS Code VSIX** + **macOS·Windows·Linux 네이티브 앱** + **`oneoffice-mcp` AI 에이전트 서버** | 전 플랫폼 100% 무의존 구동 | `🟡 Sprint 5–6` |
 
 ---
