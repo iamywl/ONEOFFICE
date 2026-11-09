@@ -1,0 +1,111 @@
+{
+  "name": "oneoffice-vscode",
+  "displayName": "ONEOFFICE — All-in-One Office Platform",
+  "description": "Unified HWPX/HWP, DOCX, XLSX, PPTX, and PDF Viewer & Electronic Signing Studio for VS Code",
+  "version": "0.1.0-alpha.1",
+  "publisher": "iamywl",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iamywl/ONEOFFICE.git"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization",
+    "Formatters",
+    "Data Science"
+  ],
+  "keywords": [
+    "hwp",
+    "hwpx",
+    "docx",
+    "xlsx",
+    "pptx",
+    "pdf",
+    "한글",
+    "office",
+    "oneoffice",
+    "signature",
+    "mcp"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onCustomEditor:oneoffice.hwpxEditor",
+    "onCustomEditor:oneoffice.docxEditor",
+    "onCustomEditor:oneoffice.xlsxEditor",
+    "onCustomEditor:oneoffice.pptxEditor",
+    "onCustomEditor:oneoffice.pdfEditor"
+  ],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "oneoffice.hwpxEditor",
+        "displayName": "ONEOFFICE 한글 (HWPX/HWP) 에디터",
+        "selector": [
+          { "filenamePattern": "*.{hwpx,HWPX,Hwpx}" },
+          { "filenamePattern": "*.{hwp,HWP,Hwp}" },
+          { "filenamePattern": "*.{hml,HML,Hml}" }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "oneoffice.docxEditor",
+        "displayName": "ONEOFFICE Word (DOCX) 에디터",
+        "selector": [
+          { "filenamePattern": "*.{docx,DOCX}" },
+          { "filenamePattern": "*.{doc,DOC}" }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "oneoffice.xlsxEditor",
+        "displayName": "ONEOFFICE Excel (XLSX) 스프레드시트",
+        "selector": [
+          { "filenamePattern": "*.{xlsx,XLSX}" },
+          { "filenamePattern": "*.{xls,XLS}" },
+          { "filenamePattern": "*.{csv,CSV}" },
+          { "filenamePattern": "*.{tsv,TSV}" }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "oneoffice.pptxEditor",
+        "displayName": "ONEOFFICE PowerPoint (PPTX) 슬라이드",
+        "selector": [
+          { "filenamePattern": "*.{pptx,PPTX}" },
+          { "filenamePattern": "*.{potx,POTX}" },
+          { "filenamePattern": "*.{ppsx,PPSX}" }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "oneoffice.pdfEditor",
+        "displayName": "ONEOFFICE PDF 뷰어 & 전자서명/직인 날인",
+        "selector": [
+          { "filenamePattern": "*.{pdf,PDF}" }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      { "command": "oneoffice.newHwpx", "title": "ONEOFFICE: 새 HWPX 제안서 문서 만들기" },
+      { "command": "oneoffice.newDocx", "title": "ONEOFFICE: 새 DOCX 보고서 만들기" },
+      { "command": "oneoffice.newXlsx", "title": "ONEOFFICE: 새 XLSX 수식 스프레드시트 만들기" },
+      { "command": "oneoffice.newPptx", "title": "ONEOFFICE: 새 PPTX 프레젠테이션 만들기" },
+      { "command": "oneoffice.signPdf", "title": "ONEOFFICE: PDF 전자서명 및 직인 날인하기" },
+      { "command": "oneoffice.insertDiagram", "title": "ONEOFFICE: 제안서 도식화(DiagramSpec) 삽입" },
+      { "command": "oneoffice.startMcpServer", "title": "ONEOFFICE: AI MCP 서버 시작 (JSON-RPC)" }
+    ]
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0"
+  }
+}
