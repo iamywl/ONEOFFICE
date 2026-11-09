@@ -85,6 +85,58 @@ impl StudioApp {
         });
     }
 
+    /// Opens a document by file path, auto-detecting format and loading content.
+    pub fn open_file(&mut self, ctx: &egui::Context, path_str: &str) {
+        let path = std::path::Path::new(path_str);
+        let ext = path
+            .extension()
+            .and_then(|s| s.to_str())
+            .unwrap_or("")
+            .to_lowercase();
+        self.document_title = path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .unwrap_or(path_str)
+            .to_string();
+
+        match ext.as_str() {
+            "pdf" => {
+                self.active_doc = ActiveDocumentKind::Pdf;
+                match std::fs::read(path) {
+                    Ok(bytes) => {
+                        if let Err(e) = self.pdf_widget.load_pdf_bytes(ctx, &bytes) {
+                            self.status_text = format!("PDF 로드 실패: {e}");
+                        } else {
+                            self.status_text = format!("PDF 열림: {}", self.document_title);
+                        }
+                    }
+                    Err(e) => {
+                        self.status_text = format!("파일 읽기 실패: {e}");
+                    }
+                }
+            }
+            "hwpx" | "hwp" | "hml" => {
+                self.active_doc = ActiveDocumentKind::Hwpx;
+                self.status_text = format!("한글 문서 열림: {}", self.document_title);
+            }
+            "docx" | "doc" => {
+                self.active_doc = ActiveDocumentKind::Docx;
+                self.status_text = format!("워드 문서 열림: {}", self.document_title);
+            }
+            "xlsx" | "xls" | "csv" => {
+                self.active_doc = ActiveDocumentKind::Xlsx;
+                self.status_text = format!("엑셀 시트 열림: {}", self.document_title);
+            }
+            "pptx" | "ppt" => {
+                self.active_doc = ActiveDocumentKind::Pptx;
+                self.status_text = format!("슬라이드 문서 열림: {}", self.document_title);
+            }
+            _ => {
+                self.status_text = format!("알 수 없는 파일 형식: {path_str}");
+            }
+        }
+    }
+
     fn show_header(&mut self, ui: &mut Ui) {
         ui.add_space(4.0);
         ui.horizontal(|ui| {
