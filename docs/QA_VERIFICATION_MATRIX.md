@@ -23,7 +23,7 @@
 | **F-08** | HWPX+Excel | HWPX/DOCX 내부 라이브 엑셀 수식 표 (`<hp:tbl>` + `.xlsx` 사이드카 + 수식 HUD) | `✅ Verified (Core)` | Wave 1: Track C / Wave 2 | `HwpxTableFormulaSidecar` SHA-256 staleness & `.xlsx` 동기화 |
 | **F-09** | HWPX+PPT | HWPX/DOCX 내부 인라인 PPT 도식 서브캔버스 및 26종 차트 삽입 | `🟡 Sprint Target` | Wave 2: Track E | 더블클릭 인플레이스 편집 Light/Dark 캡처 |
 | **F-10** | AI MCP | 통합 `oneoffice-mcp` (`diagram.compose`, `pdf.sign`, `visual.verify_page`) | `✅ Verified` | Wave 2: Track F | JSON-RPC 2.0 stdio + 5종 도구 + AI 폐루프 시각 자가검증 통과 |
-| **F-11** | VSC Ext | 올인원 `oneoffice-vscode` VSIX (`.hwpx`, `.docx`, `.xlsx`, `.pptx`, `.pdf`) | `🟡 Sprint Target` | Wave 3: Track G | `@vscode/test-electron` 5종 포맷 E2E |
+| **F-11** | VSC Ext | 올인원 `oneoffice-vscode` VSIX (`.hwpx`, `.docx`, `.xlsx`, `.pptx`, `.pdf`) | `✅ Verified` | Wave 3: Track G | 5종 Custom Editor 등록 + 7개 통합 커맨드 + 매니페스트 검증 |
 | **F-12** | 3-OS Native | `macOS`(`.app`), `Windows`(`.exe`/MSI), `Linux`(`AppImage`/`.deb`) 네이티브 | `🟡 Sprint Target` | Wave 3: Track G | 3대 OS CI 빌드 + 네이티브 윈도우 캡처 |
 
 ---
