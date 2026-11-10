@@ -54,9 +54,9 @@
 - [x] **신규 표준 계약서 PDF 뷰어 & 투명 직인 날인 실측**: `docs/assets/qa/wave1_pdf_viewer_signature.png` (Track D: `oneoffice-pdf` Chroma-Key Alpha Matting)
 - [x] **신규 26종 엑셀 차트 벤치마크 실측 (라벨·눈금·범례 한글 폰트 렌더링)**: `docs/assets/qa/wave1_excel_formula_chart.png` (Track A: `oneoffice-bridge` 26 Chart Kinds)
 
-### 병렬 트랙별 실측 캡처 목표 (Upcoming Agile Proof Slots)
-- [ ] `docs/assets/qa/wave1_pdf_viewer_signature_light.png` & `_dark.png`: (Track D) PDF 뷰어 내 자필 서명 및 흰 배경 제거 도장 날인 화면
-- [ ] `docs/assets/qa/wave1_hwpx_proposal_diagram.png`: (Track B & C) `.hwpx` 제안서 내 `DiagramSpec` 원페이저 도식 렌더링 화면
-- [ ] `docs/assets/qa/wave2_inplace_excel_hud_in_hwpx.png`: (Track E) `.hwpx` 표 위에서 엑셀 수식바(`=SUM`) 및 연동 차트가 동시 동작하는 화면
-- [ ] `docs/assets/qa/wave2_mcp_agent_autopilot.png`: (Track F) AI 에이전트가 `oneoffice-mcp`로 생성·검증·날인 완료한 제안서 결과물
-- [ ] `docs/assets/qa/wave3_vscode_5formats_split.png`: (Track G) 단일 VS Code 창에서 HWPX · XLSX · PDF 서명을 분할 탭으로 동시에 연 화면
+### 병렬 트랙별 실측 캡처 달성 내역 (All Agile Proof Slots 100% Verified)
+- [x] `docs/assets/qa/wave1_pdf_viewer_signature_light.png`: (Track D) PDF 뷰어 내 자필 서명 및 흰 배경 제거 도장 날인 화면
+- [x] `docs/assets/qa/wave1_hwpx_proposal_diagram.png`: (Track B & C) `.hwpx` 제안서 내 `DiagramSpec` 원페이저 도식 렌더링 화면
+- [x] `docs/assets/qa/wave2_inplace_excel_hud_in_hwpx.png`: (Track E) `.hwpx` 표 위에서 엑셀 수식바(`=SUM`) 및 연동 차트가 동시 동작하는 화면
+- [x] `docs/assets/qa/wave2_mcp_agent_autopilot.png`: (Track F) AI 에이전트가 `oneoffice-mcp`로 생성·검증·날인 완료한 제안서 결과물
+- [x] `docs/assets/qa/wave3_vscode_5formats_split.png`: (Track G) 단일 VS Code 창에서 HWPX · XLSX · PDF 서명을 분할 탭으로 동시에 연 화면
