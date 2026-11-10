@@ -4,23 +4,23 @@
 
 # ONEOFFICE — 올인원 오픈소스 오피스 플랫폼 v0.1.0-alpha.1
 
-> **English**: [`README.en.md`](README.en.md) · **아키텍처 마스터 플랜**: [`docs/MASTER_ARCHITECTURE_PLAN.md`](docs/MASTER_ARCHITECTURE_PLAN.md)
+> **English Version**: [`README.en.md`](README.en.md) · **아키텍처 마스터 플랜**: [`docs/MASTER_ARCHITECTURE_PLAN.md`](docs/MASTER_ARCHITECTURE_PLAN.md) · **공식 V&V 보고서**: [`docs/V_AND_V_REPORT.md`](docs/V_AND_V_REPORT.md)
 
-**한컴 한글(`.hwpx`/`.hwp`) · 워드(`.docx`) · 엑셀(`.xlsx`) · 파워포인트(`.pptx`) · PDF(뷰어 & 전자서명/직인)**를 하나로 통합하여, **제안서 도식화부터 513개 엑셀 수식 표, 26종 벡터 차트, 무손실 PDF 날인, AI 에이전트(`MCP`)**까지 전 환경(macOS · Windows · Linux · VS Code)에서 동일하게 동작하는 차세대 오픈소스 오피스 스위트입니다.
+**한컴 한글(`.hwpx`/`.hwp`) · 워드(`.docx`) · 엑셀(`.xlsx`) · 파워포인트(`.pptx`) · PDF(뷰어 & 전자서명/직인)**를 하나로 통합하여, **제안서 도식화부터 513개 엑셀 수식 표, 26종 벡터 차트, 무손실 PDF 날인, AI 에이전트(`oneoffice-mcp`)**까지 전 환경(macOS · Windows · Linux · VS Code)에서 동일하게 동작하는 차세대 엔터프라이즈 오픈소스 오피스 스위트입니다.
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-MIT)
 [![Platforms](https://img.shields.io/badge/OS-macOS%20%7C%20Windows%20%7C%20Linux-0EA5E9.svg)](#-설치--빠른-시작-installation--quickstart)
 [![VS Code Extension](https://img.shields.io/badge/VS%20Code-All--in--One%20VSIX-2563EB.svg)](#방법-a--vs-code-올인원-확장-vsix-권장)
-[![AI Agent MCP](https://img.shields.io/badge/AI%20Agent-Model%20Context%20Protocol-8B5CF6.svg)](#-ai-agent--mcp-통합-편집-model-context-protocol)
+[![AI Agent MCP](https://img.shields.io/badge/AI%20Agent-Model%20Context%20Protocol-8B5CF6.svg)](#-ai-에이전트-mcp-연동-model-context-protocol)
 [![Rust Safety](https://img.shields.io/badge/Rust-unsafe__code%20%3D%20%22forbid%22-10B981.svg)](CONTRIBUTING.md)
-[![IEEE 1012 V&V](https://img.shields.io/badge/IEEE%201012-V%26V%20Lifecycle%20PASS-blueviolet.svg)](docs/V_AND_V_LIFECYCLE.md)
-[![6-Tier QA Gate](https://img.shields.io/badge/QA%20Gate-6--Tier%20Verified%20100%25-success.svg)](#-무신뢰-6단계-실측-검증-게이트-empirical-qa-gates)
+[![IEEE 1012 V&V](https://img.shields.io/badge/IEEE%201012-V%26V%20Lifecycle%20PASS-blueviolet.svg)](docs/V_AND_V_REPORT.md)
+[![6-Tier QA Gate](https://img.shields.io/badge/QA%20Gate-6--Tier%20Verified%20100%25-success.svg)](docs/QA_VERIFICATION_MATRIX.md)
 
 ---
 
 ## ⚡ 설치 & 빠른 시작 (Installation & Quickstart)
 
-> **5분이면 시작합니다.** ONEOFFICE는 단일 바이너리 네이티브 데스크톱 앱, VS Code 올인원 확장, 그리고 AI 에이전트 연동용 MCP 서버 3가지 경로를 제공합니다.
+> **5분이면 시작합니다.** ONEOFFICE는 단일 바이너리 데스크톱 앱, VS Code 올인원 확장, 그리고 AI 에이전트 연동용 MCP 서버 3가지 경로를 제공합니다.
 
 ### 방법 A — VS Code 올인원 확장 (`.vsix`) (권장)
 VS Code 마켓플레이스 또는 단일 `.vsix` 패키지로 설치하여 `.hwpx`, `.docx`, `.xlsx`, `.pptx`, `.pdf`를 오프라인 WASM 웹뷰로 즉시 열람·편집합니다.
@@ -46,7 +46,7 @@ chmod +x ONEOFFICE-x86_64.AppImage && ./ONEOFFICE-x86_64.AppImage
 ONEOFFICE.exe
 ```
 
-### 방법 C — AI 에이전트 MCP 서버 연동 (`crates/oneoffice-mcp`)
+### 방법 C — AI 에이전트 MCP 연동 (`crates/oneoffice-mcp`)
 Claude Desktop, Cursor, Codex 등 MCP 클라이언트에 `oneoffice-mcp`를 등록하여 자연어로 문서를 생성하고 시각적으로 검증합니다.
 
 ```json
@@ -63,9 +63,9 @@ Claude Desktop, Cursor, Codex 등 MCP 클라이언트에 `oneoffice-mcp`를 등�
 }
 ```
 
-### 방법 D — 소스코드 클론 및 로컬 빌드
+### 방법 D — 소스코드 로컬 빌드
 ```bash
-git clone https://github.com/your-org/ONEOFFICE.git --recursive
+git clone https://github.com/iamywl/ONEOFFICE.git --recursive
 cd ONEOFFICE
 cargo run -p oneoffice-desktop --release
 ```
@@ -76,7 +76,7 @@ cargo run -p oneoffice-desktop --release
 
 한국의 실무 제안서(정부지원사업·RFP·공공기관 보고서)와 기획서는 **`.hwpx`/`.hwp` 또는 `.docx`** 로 작성하지만, 심사위원의 시선을 사로잡기 위해서는 **컨설팅급 도식화(비교 카드, 대형 KPI 콜아웃, 프로세스 다이어그램)** 와 **정교한 엑셀 수식 표·차트**, 그리고 제출 직전 **PDF 변환 및 직인/서명 날인**이 필수적입니다.
 
-### 기존 오피스 작업 방식의 치명적 한계
+### 기존 오피스 작업 방식의 치명적 한계와 해결책
 
 | 비교 항목 | 기존 오피스 작업 방식 | ONEOFFICE 올인원 인플레이스 |
 | :--- | :--- | :--- |
@@ -89,10 +89,10 @@ cargo run -p oneoffice-desktop --release
 
 ---
 
-## ⚡ 4대 핵심 철칙 (Prime Directives)
+## ⚡ 핵심 철칙 (Prime Directives)
 
 1. **에디터 본질 사수 & 인플레이스 편집 (In-Place Co-Authoring)**:
-   - 단순 뷰어나 정적 이미지로의 후퇴를 원천 금지합니다. HWPX·DOCX 본문 내 엑셀 표, 26종 벡터 차트, PPT급 도식, 그리고 PDF 위 서명/직인은 **모두 문서 캔버스 안에서 직접 선택·편집·Undo/Redo**가 가능해야 합니다.
+   - 단순 뷰어나 정적 이미지로의 후퇴를 원천 금지합니다. HWPX·DOCX 본문 내 엑셀 표, 26종 벡터 차트, PPT급 도식, 그리고 PDF 위 서명/직인은 **모두 문서 캔버스 안에서 직접 선택·편집·Undo/Redo**가 가능합니다.
 2. **이중 무손실 영속화 & PDF 비파괴 저장 (Lossless Dual-Persistence)**:
    - 복합 개체는 한컴·MS Office 호환 네이티브 태그(`<hp:tbl>`, `<w:drawing>`)와 고수준 시맨틱 사이드카(`DiagramSpec`, `LiveTableSidecar`)를 동시 보존합니다. PDF 서명 저장 시 원본 벡터 텍스트·하이퍼링크·북마크를 단 1바이트도 훼손하지 않습니다.
 3. **3대 OS 네이티브 & VS Code 확장 동등성 (Zero OS Lock-In)**:
@@ -102,43 +102,49 @@ cargo run -p oneoffice-desktop --release
 
 ---
 
-## 🏛️ 시스템 아키텍처 및 파이프라인 (System Architecture)
+## 🏛️ 개발자 관점: 계층형 시스템 아키텍처 및 공학적 무결성
 
-ONEOFFICE는 순수 Rust 코어 라이브러리를 단일 진실 공급원(SSOT)으로 삼고, 데스크톱 네이티브 셸, VS Code 웹뷰, 그리고 AI Agent MCP 서버로 확장되는 모듈형 하이브리드 아키텍처를 채택하고 있습니다.
+개발자 관점에서 ONEOFFICE는 **순수 Rust(Rust 2024 Edition)를 단일 진실 공급원(SSOT)**으로 삼고, 데스크톱 네이티브 셸, VS Code 웹뷰, 그리고 AI Agent MCP 서버로 확장되는 모듈형 하이브리드 아키텍처입니다.
 
 ```mermaid
 flowchart TD
-    subgraph L4["실행 환경 (Layer 4: Runtimes)"]
-        VSC["VS Code 익스텐션\n(WASM + Webview)"]
-        APP["크로스플랫폼 네이티브\n(macOS · Windows · Linux)"]
-        MCP["통합 MCP 서버\n(AI Agent Co-Authoring)"]
+    subgraph L4["실행 환경 (Layer 4: Runtimes & Hosts)"]
+        VSC["VS Code 익스텐션\nextensions/oneoffice-vscode\nWASM + Webview Custom Editor"]
+        APP["크로스플랫폼 네이티브 데스크톱\napps/oneoffice-desktop\neframe / egui / wgpu"]
+        MCP["통합 MCP 서버\ncrates/oneoffice-mcp\nModel Context Protocol"]
     end
 
-    subgraph L3["통합 브릿지 레이어 (Layer 3: Bridge & Engines)"]
-        DIAG["oneoffice-diagram\n(도식화 DSL · HarfRust)"]
-        PDF_ENG["oneoffice-pdf\n(hayro + krilla 뷰어/서명)"]
-        BRDG["oneoffice-bridge\n(513 수식 · 26종 차트)"]
-        HWP_CORE["oneoffice-hwpx-core\n(무손실 OWPML 파서)"]
+    subgraph L3["통합 브릿지 레이어 (Layer 3: Unified Rust Bridges)"]
+        UI_LIB["oneoffice-ui\n(통합 스튜디오 UI & 서식바)"]
+        DIAG["oneoffice-diagram\n(도식화 DSL · HarfRust 레이아웃)"]
+        PDF_ENG["oneoffice-pdf\n(craft-pdf: hayro + krilla 뷰어/서명)"]
+        BRDG["oneoffice-bridge\n(513 수식 · 26종 차트 · 폰트)"]
+        HWP_CORE["oneoffice-hwpx-core\n(OWPML XML 무손실 직렬화)"]
     end
 
     subgraph L2["핵심 기반 엔진 (Layer 2: Core Submodules)"]
         H_HWP["hanul-hwpx\n(한컴 단축키 & 위지윅)"]
-        O_WORD["WordCraft (OPEN_WORD)\n(다단 조판 & BehindText)"]
-        O_EXCEL["GridCraft (OPEN_EXCELL)\n(513 수식 · 26종 차트)"]
-        O_PPT["DeckCraft (OPEN_PPTX)\n(180종 AutoShape)"]
+        O_WORD["WordCraft (OPEN_WORD)\n(다단 조판 & BehindText 직인)"]
+        O_EXCEL["GridCraft (OPEN_EXCELL)\n(513 함수 엔진 & 26종 벡터 차트)"]
+        O_PPT["DeckCraft (OPEN_PPTX)\n(180종 AutoShape & 커넥터 글루)"]
     end
 
-    subgraph L1["무손실 문서 포맷 (Layer 1: Lossless Formats)"]
-        F_HWPX[".hwpx / .hwp"]
-        F_DOCX[".docx / .doc"]
-        F_XLSX[".xlsx / .xls"]
-        F_PPTX[".pptx"]
-        F_PDF[".pdf"]
+    subgraph L1["무손실 문서 포맷 (Layer 1: Lossless Standards)"]
+        F_HWPX["HWPX / HWP\n(KS X 6101 & OWPML)"]
+        F_DOCX["DOCX / DOC\n(ECMA-376 DrawingML)"]
+        F_XLSX["XLSX / CSV\n(OpenXML Spreadsheet)"]
+        F_PPTX["PPTX\n(PresentationML)"]
+        F_PDF["PDF\n(ISO 32000-1)"]
     end
 
     VSC --> L3
     APP --> L3
     MCP --> L3
+
+    UI_LIB --> BRDG
+    UI_LIB --> DIAG
+    UI_LIB --> PDF_ENG
+    UI_LIB --> HWP_CORE
 
     DIAG --> L2
     PDF_ENG --> L2
@@ -148,35 +154,49 @@ flowchart TD
     L2 --> L1
 ```
 
+### 코어 크레이트 및 모듈별 링크 & 책임 명세
+- [`crates/oneoffice-ui/`](crates/oneoffice-ui/): egui 기반 Frosted Glass 통합 스튜디오 UI, Pretendard 서식 리본바, 문단별 퀵 컨트롤 HUD(▲/▼/복제/삭제), 인플레이스 수식 HUD.
+- [`crates/oneoffice-diagram/`](crates/oneoffice-diagram/): 제안서 선언적 도식 DSL(`DiagramSpec`), HarfRust 한글 3-Pass 레이아웃 엔진, OWPML/DrawingML/SVG 컴파일러.
+- [`crates/oneoffice-pdf/`](crates/oneoffice-pdf/): 순수 Rust `craft-pdf`(`hayro` + `krilla`), 크로마키 알파 매팅(흰 배경 투명화), 텍스트 앵커 자동 탐색 날인.
+- [`crates/oneoffice-bridge/`](crates/oneoffice-bridge/): GridCraft 513개 엑셀 수식 브릿지, 26종 벡터 차트 실시간 래스터/SVG 엔진, 시스템 폰트 글리프 커버리지 실측.
+- [`crates/oneoffice-hwpx-core/`](crates/oneoffice-hwpx-core/): KS X 6101 OWPML XML 파서, `<hp:tbl>` 수식 사이드카 연동, `<hp:chart>` 및 `<hp:container>` 무손실 직렬화.
+- [`crates/oneoffice-mcp/`](crates/oneoffice-mcp/): Model Context Protocol v2024-11-05 서버, AI 에이전트 문서 작성·표·차트·서명 및 `visual.verify_page` 자가 검증 도구.
+- [`apps/oneoffice-desktop/`](apps/oneoffice-desktop/): macOS(Metal) · Windows(DX12) · Linux(Wayland/X11) 3대 OS 네이티브 셸 (`eframe`/`wgpu`), TCP 루프백 RPC 제어.
+- [`extensions/oneoffice-vscode/`](extensions/oneoffice-vscode/): 5대 포맷(.hwpx, .docx, .xlsx, .pptx, .pdf) 통합 VS Code Custom Editor 익스텐션, 오프라인 WASM 번들.
+- [`hanul-hwpx/`](hanul-hwpx/): TypeScript 기반 한글 에디터, OWPML 버그 6건 박멸, 한컴 표준 단축키(`F5`, `M`, `S`, `Alt+L/T`, `F7`).
+- [`OPEN_WORD/`](OPEN_WORD/): Pure Rust WordCraft(v0.11.0), 다단 페이지네이션, 본문 뒤 직인(`BehindText`) DrawingML 레이어링, Tagged PDF 출력.
+- [`OPEN_EXCELL/`](OPEN_EXCELL/): Pure Rust GridCraft(v0.12.1), 513개 엑셀 함수 수식 엔진(`gridcraft-calc`), 26종 차트 엔진(`gridcraft-chart`).
+- [`OPEN_PPTX/`](OPEN_PPTX/): DeckCraft(v0.11.1), 327개 커맨드, 180종 AutoShape, 커넥터 글루(도형 이동 시 화살표 자동 연결 유지).
+
+---
+
+## 👥 사용자 관점: 워크플로우 혁신 및 실무 가치
+
+실무자(기획자, 연구원, 행정관, 컨설턴트)의 관점에서 ONEOFFICE는 **여러 프로그램을 띄워놓고 캡처-붙여넣기를 반복하던 고통을 끝내는 단일 통합 스튜디오**입니다.
+
+### 1. 손쉬운 글자 편집 및 문단별 퀵 컨트롤
+- **서식 리본바**: Pretendard, Apple SD Gothic Neo 등 시스템 폰트 선택, 글자 크기(`- 14pt +`), 굵게(`B`), 기울임(`/`), 밑줄(`U`), 취소선(`S`), 글자색(검정/네이비/빨강/초록/보라), 형광펜(노랑/연두/하늘) 하이라이트, 좌/중/우 정렬 지원.
+- **문단별 퀵 컨트롤 HUD**: 본문 문단을 클릭하면 즉시 나타나는 `[▲ 위로]` `[▼ 아래로]` `[+ 복제]` `[B/I/U/S]` `[- 14pt +]` `[삭제 X]` 컨트롤로 복잡한 단축키 없이 손쉽게 문단을 조작합니다.
+- **제목 & 부제 즉시 수정**: 문서 제목과 메타데이터 부제를 클릭하여 현장에서 즉시 타이핑 수정할 수 있습니다.
+
+### 2. 인플레이스 복합 개체 삽입 액션바
+- 문단 사이사이에 배치된 `[+ 새 문단]`, `[+ 표 삽입]`, `[+ 차트 삽입]`, `[+ 도식 삽입]` 버튼으로 파워포인트나 엑셀을 켤 필요 없이 즉각 필요한 블록을 본문에 추가합니다.
+
+### 3. 컨설팅급 제안서 인포그래픽 도식화 (DiagramSpec)
+- 3개 비교 카드, 대형 KPI 콜아웃(4.6개, 16%), 근거 불릿, 시사점 박스, 추진 일정 로드맵 등 고품질 제안서 템플릿이 제공되며, 텍스트를 길게 수정해도 **글자가 박스 밖으로 삐져나오지 않는 오버플로우 0건 자동 리사이징**을 보장합니다.
+
+### 4. 513 엑셀 수식표 & 26종 실시간 벡터 차트
+- 본문 표의 단가나 수량을 수정하면 `=SUM()`, `=AVERAGE()` 수식이 즉시 재계산되고, 하단에 연동된 26종 벡터 차트(세로 막대, 꺾은선, 도넛, 폭포수형 등)가 실시간으로 다시 그려집니다.
+
+### 5. 고성능 순수 Rust PDF 뷰어 & 크로마키 무손실 직인 날인
+- 스마트폰으로 흰 종이에 찍은 인감도장 사진을 불러오면 **흰 배경을 자동으로 투명화**하여 붉은 인주 부분만 추출합니다.
+- 계약서의 `"(인)"` 또는 `"서명"` 위치를 자동으로 찾아 1클릭으로 정렬 날인하며, 원본 PDF의 벡터 텍스트와 하이퍼링크를 손상 없이 보존합니다.
+
 ---
 
 ## 👥 정예 10대 서브에이전트 조직 (10 Specialized Sub-Agents)
 
 ONEOFFICE는 병렬 개발의 품질을 극대화하고 자가 승인(Self-Certification)을 원천 차단하기 위해 **독점 쓰기 영역(Write Scope)이 철저히 격리된 10대 전문 에이전트 조직**으로 운영됩니다 ([`AGENTS.md`](AGENTS.md) 헌장 준수).
-
-```mermaid
-flowchart LR
-    P["01. 기획&거버너\nplanner"] --> R["02. 수식·차트 브릿지\nrust-core"]
-    P --> D["03. 도식화 레이아웃\ndiagram-engine"]
-    P --> H["04. HWPX 복합개체\nhwpx-bridge"]
-    P --> PDF["05. PDF 뷰어·서명\npdf-engineer"]
-
-    R --> U["06. 스튜디오 UX\nstudio-ux"]
-    D --> U
-    H --> U
-    PDF --> U
-
-    R --> M["07. 통합 MCP 설계\nmcp-architect"]
-    D --> M
-    H --> M
-    PDF --> M
-
-    U --> PKG["08. VSIX·OS 패키징\nrelease-governor"]
-    M --> PKG
-
-    PKG --> Q["09. 적대적 실측 QA\nqa-auditor"]
-    Q -->|"6단계 게이트 실측 합격"| DOC["10. 문서 디자인&쇼케이스\noneoffice-doc-designer"]
-```
 
 | ID | 서브에이전트 | 정의 문서 | 독점 쓰기 영역 | 핵심 임무 |
 | :---: | :--- | :--- | :--- | :--- |
@@ -185,7 +205,7 @@ flowchart LR
 | **03** | `oneoffice-diagram-engine` | `.agents/agents/03-diagram-layout-architect.md` | `crates/oneoffice-diagram/**` | 제안서 도식화 DSL(`DiagramSpec`), 한글 오버플로우 0건 레이아웃 엔진 |
 | **04** | `oneoffice-hwpx-bridge` | `.agents/agents/04-hwpx-compound-engineer.md` | `crates/oneoffice-hwpx-core/**` | HWPX OWPML 버그 6건 박멸, `<hp:tbl>` 수식 사이드카, `<hp:chart>` 직렬화 |
 | **05** | `oneoffice-pdf-engineer` | `.agents/agents/05-pdf-viewer-signature-engineer.md` | `crates/oneoffice-pdf/**` | 순수 Rust `craft-pdf` 뷰어, 크로마키 투명화 직인, 텍스트 앵커 자동 날인 |
-| **06** | `oneoffice-studio-ux` | `.agents/agents/06-studio-ux-craftsman.md` | `hanul-hwpx/media/**`, `crates/oneoffice-ui/**` | 인플레이스 수식 HUD, 인라인 도식 캔버스, 글래스모피즘 라이트/다크 테마 |
+| **06** | `oneoffice-studio-ux` | `.agents/agents/06-studio-ux-craftsman.md` | `crates/oneoffice-ui/**` | 인플레이스 수식 HUD, 인라인 도식 캔버스, 글래스모피즘 라이트/다크 테마 |
 | **07** | `oneoffice-mcp-architect` | `.agents/agents/07-mcp-agent-architect.md` | `crates/oneoffice-mcp/**` | 통합 MCP 서버 (도식·표·차트·PDF 날인·`visual.verify_page` 자가 검증) |
 | **08** | `oneoffice-release-governor` | `.agents/agents/08-crossplatform-packaging-governor.md` | `extensions/**`, `apps/**`, `packaging/**` | 올인원 VS Code VSIX 패키징 및 macOS · Windows · Linux 설치기 구축 |
 | **09** | `oneoffice-qa-auditor` | `.agents/agents/09-adversarial-qa-auditor.md` | `tests/**`, `scripts/qa/**` | 무신뢰(Zero-Trust) 6단계 실측 검증 (수식 오라클, 도식 BBox, PDF 서명 무결성) |
@@ -228,6 +248,11 @@ MS Word(`.docx`) 문서를 순수 Rust 조판 엔진(`WordCraft`)으로 렌더�
 | ![OPEN_WORD macOS Native](docs/assets/screenshots/05_word_macos_native.png) | ![OPEN_WORD Behind-Text Stamp](docs/assets/screenshots/06_word_behind_stamp.png) |
 | **실행 화면 명세**: GPU 가속(`wgpu`) 기반 macOS 초고해상도 다단 조판 | **실행 화면 명세**: 본문 텍스트 뒤에 날인되어 글자를 가리지 않는 반투명 인감도장 |
 
+<p align="center">
+  <img src="docs/assets/qa/headless_docx_studio.png" alt="ONEOFFICE DOCX Live Studio" width="820"/>
+</p>
+<p align="center"><em>실제 구동 화면: DOCX 계약서 본문 내 Pretendard 서식 리본바 + 인플레이스 블록 삽입 액션바 + 컨설팅 비교 도식화 + 26종 차트 + 전자직인 실시간 렌더링</em></p>
+
 - **기능 명세**:
   - `wgpu` 및 `vello_cpu` 기반의 초고속 페이지네이션 및 다단 텍스트 렌더링.
   - DOCX DrawingML `<wp:anchor>` 태그의 `behindDoc="1"` 속성을 완벽 해석하여 텍스트 레이어 뒤에 이미지를 합성.
@@ -244,10 +269,10 @@ MS Word(`.docx`) 문서를 순수 Rust 조판 엔진(`WordCraft`)으로 렌더�
 | ![OPEN_EXCELL Native Sales & Chart](docs/assets/screenshots/07_excel_native_sales.png) | ![OPEN_EXCELL VS Code Chart](docs/assets/screenshots/08_excel_vscode_chart.png) |
 | **실행 화면 명세**: 수식 연산 결과와 실시간 연동되는 네이티브 바 차트 | **실행 화면 명세**: VS Code 에디터 내에서 1:1로 동작하는 수식바 및 차트 팔레트 |
 
-| 26종 벡터 차트 & 513개 엑셀 수식표 브릿지 실측 벤치마크 |
-| :---: |
-| <img src="docs/assets/qa/wave1_excel_formula_chart.png" alt="ONEOFFICE 26-Type Chart Benchmark" width="85%"/> |
-| **실측 화면 명세**: 영역형, 꺾은선형, 도넛형, 거품형 등 26종 전 차트가 한글 폰트(`Apple SD Gothic Neo`)와 함께 렌더링된 모습 |
+<p align="center">
+  <img src="docs/assets/qa/wave1_excel_formula_chart.png" alt="ONEOFFICE 26-Type Chart Benchmark" width="820"/>
+</p>
+<p align="center"><em>실측 화면 명세: 영역형, 꺾은선형, 도넛형, 거품형 등 26종 전 차트가 한글 폰트(`Apple SD Gothic Neo`)와 함께 렌더링된 모습</em></p>
 
 - **기능 명세**:
   - Excel 2024 호환 **513개 수식 함수**(`gridcraft-functions`, SUM, XLOOKUP, INDEX/MATCH, NPV, IRR 등) 지원.
@@ -310,35 +335,9 @@ MS Word(`.docx`) 문서를 순수 Rust 조판 엔진(`WordCraft`)으로 렌더�
 
 ---
 
-## 🤖 AI Agent & MCP 통합 편집 (Model Context Protocol)
-
-ONEOFFICE는 에이전트 퍼스트(Agent-First) 철학으로 설계되었습니다. AI 에이전트는 `oneoffice-mcp`를 통해 문서를 직접 조작하고, 시각 검증 도구(`visual.verify_page`)로 결과물을 스스로 확인하며 자가 교정(Self-Correction)합니다.
-
-### 제공되는 고수준 MCP 도구 체계
-
-| MCP 도구 | 매개변수 | 설명 |
-| :--- | :--- | :--- |
-| `oneoffice.diagram.compose` | `doc_path`, `spec: DiagramSpec` | 제안서 비교 카드·KPI 콜아웃·프로세스 도식을 문서 내에 자동 삽입 |
-| `oneoffice.table.upsert` | `doc_path`, `table_id`, `data`, `formulas` | 513개 수식이 연동된 실시간 엑셀 계산 표를 문서에 삽입 및 업데이트 |
-| `oneoffice.chart.upsert` | `doc_path`, `chart_type`, `data_range` | 26종 벡터 차트를 표 데이터와 실시간 연동하여 생성 |
-| `oneoffice.pdf.sign` | `pdf_path`, `stamp_image`, `anchor_text: "(인)"` | 계약서/공문서의 지정 위치에 투명화된 직인 또는 베지어 서명을 무손실 날인 |
-| `oneoffice.visual.verify_page` | `doc_path`, `page_idx` | 렌더링된 페이지의 스크린샷과 BBox 오버플로우 지표를 반환하여 에이전트 자가 검증 |
-
-### AI 에이전트 실행 예시 (자연어 한 문장)
-```text
-사용자: "사업제안서.hwpx 3페이지에 3개년 매출 성장률 KPI 카드 도식을 넣고, 하단 표에 평균 성장률 수식을 걸어줘."
-
-AI Agent (oneoffice-mcp 실행 흐름):
-1. oneoffice.diagram.compose 호출 → HarfRust 엔진이 한글 크기를 실측하여 카드 3개 자동 정렬
-2. oneoffice.table.upsert 호출 → AVERAGE 수식이 걸린 OWPML 표 생성
-3. oneoffice.visual.verify_page 호출 → 페이지 캡처를 확인하고 오버플로우 0건 검증 완료 후 사용자에게 보고
-```
-
----
-
 ## 🛡️ 무신뢰 6단계 실측 검증 게이트 (Empirical QA Gates)
 
-ONEOFFICE는 자체 승인(Self-Certification)을 금지하며, **IEEE Std 1012-2016 표준 기반의 [V&V 라이프사이클](docs/V_AND_V_LIFECYCLE.md)**을 철저히 준수합니다. 독립된 감사관(`09-adversarial-qa-auditor`)이 실행하는 6단계 검증 게이트와 V&V 스위트를 100% 통과한 산출물만 릴리스합니다 ([QA 실측 매트릭스](docs/QA_VERIFICATION_MATRIX.md) · [공식 V&V 실행 보고서](docs/V_AND_V_REPORT.md)).
+ONEOFFICE는 자체 승인(Self-Certification)을 금지하며, **IEEE Std 1012-2016 표준 기반의 [공식 V&V 실행 보고서](docs/V_AND_V_REPORT.md)**을 철저히 준수합니다. 독립된 감사관(`09-adversarial-qa-auditor`)이 실행하는 6단계 검증 게이트와 V&V 스위트를 100% 통과한 산출물만 릴리스합니다 ([QA 실측 매트릭스](docs/QA_VERIFICATION_MATRIX.md)).
 
 ```bash
 # 전체 6단계 실측 검증 게이트 일괄 실행
@@ -356,10 +355,48 @@ node scripts/qa/run-all-gates.mjs
 
 ---
 
-## 📄 라이선스 및 크레딧 (License & Attribution)
+## 🗺️ 워크스페이스 디렉토리 맵 & 컴포넌트 링크 (Workspace Sitemap)
 
-ONEOFFICE는 **`MIT OR Apache-2.0`** 듀얼 라이선스 하에 배포되는 자유 소프트웨어입니다.
-외부 클린룸 오픈소스 자산에 대한 라이선스 고지는 [`ATTRIBUTION.md`](ATTRIBUTION.md) 및 [`NOTICE`](NOTICE) 파일에서 확인하실 수 있습니다.
+```text
+ONEOFFICE/
+├── docs/                                    # 마스터 아키텍처 및 공식 V&V 문서
+│   ├── MASTER_ARCHITECTURE_PLAN.md          # 6단계 마스터 아키텍처 및 구현 로드맵
+│   ├── V_AND_V_REPORT.md                    # IEEE Std 1012 공식 V&V 실행 결과 보고서
+│   ├── QA_VERIFICATION_MATRIX.md            # 6단계 무신뢰 실측 검증 매트릭스
+│   ├── OFFICIAL_SPEC_COMPLIANCE_MATRIX.md   # MS/한컴/ISO 공식 표준 규격 준수 매트릭스
+│   ├── SPEC_DIAGRAM_AND_COMPOUND_OBJECTS.md # 제안서 도식화 DSL 및 복합개체 명세
+│   ├── SPEC_PDF_VIEWER_AND_SIGNATURE.md     # 순수 Rust PDF 뷰어 및 전자직인 명세
+│   ├── SPEC_MCP_AND_AGENT_PROTOCOL.md       # AI Agent Model Context Protocol 명세
+│   ├── VERSIONING_AND_COMMIT_POLICY.md      # Dual SemVer 2.0 및 커밋 거버넌스 규약
+│   └── assets/                              # 실측 스크린샷 및 아키텍처 벡터 에셋
+├── crates/                                  # 순수 Rust 2024 통합 코어 크레이트 (SSOT)
+│   ├── oneoffice-ui/                        # egui 기반 스튜디오 UI, 서식바, 인플레이스 편집기
+│   ├── oneoffice-diagram/                   # 제안서 도식화 DSL & HarfRust 자동 레이아웃
+│   ├── oneoffice-pdf/                       # craft-pdf 기반 PDF 뷰어 및 크로마키 날인
+│   ├── oneoffice-bridge/                    # 513개 엑셀 수식표 & 26종 차트 브릿지
+│   ├── oneoffice-hwpx-core/                 # 표준 OWPML XML 파서 및 복합개체 직렬화
+│   └── oneoffice-mcp/                       # Model Context Protocol AI 에이전트 서버
+├── apps/                                    # 크로스플랫폼 네이티브 데스크톱 앱
+│   └── oneoffice-desktop/                   # macOS · Windows · Linux 통합 eframe/wgpu 앱
+├── extensions/                              # VS Code 올인원 확장 패키지
+│   └── oneoffice-vscode/                    # 5대 포맷 통합 Webview Custom Editor (.vsix)
+├── hanul-hwpx/                              # HWP/HWPX 서브모듈 (OWPML XML & 한컴 단축키)
+├── OPEN_WORD/                               # MS Word DOCX 서브모듈 (다단 조판 & BehindText)
+├── OPEN_EXCELL/                             # MS Excel XLSX 서브모듈 (513 함수 & 26 차트)
+├── OPEN_PPTX/                               # MS PowerPoint PPTX 서브모듈 (AutoShape & 커넥터)
+├── scripts/qa/                              # 6단계 무신뢰 QA 게이트 자동화 스크립트
+│   ├── run-all-gates.mjs                    # 전체 6-Tier 게이트 일괄 검증 러너
+│   ├── v_and_v_runner.mjs                   # IEEE 1012 V&V 실행기
+│   └── verify-readme.mjs                    # 문서 링크 및 에셋 무결성 감사 하네스
+├── AGENTS.md                                # 10대 전문 서브에이전트 협업 헌장
+└── ATTRIBUTION.md                           # 클린룸 오픈소스 크레딧 및 라이선스 고지
+```
 
-- **기여 가이드**: 개발 참여를 원하시는 분은 [`CONTRIBUTING.md`](CONTRIBUTING.md)와 [`AGENTS.md`](AGENTS.md)를 참고해 주시기 바랍니다.
-- **버전 정책**: 본 프로젝트는 시맨틱 버저닝 2.0을 따릅니다 ([`docs/VERSIONING_AND_COMMIT_POLICY.md`](docs/VERSIONING_AND_COMMIT_POLICY.md)).
+---
+
+## 📄 라이선스, 거버넌스 및 크레딧 (License & Attribution)
+
+- **오픈소스 라이선스**: ONEOFFICE는 **`MIT OR Apache-2.0`** 듀얼 라이선스 하에 배포되는 자유 오픈소스 소프트웨어입니다.
+- **클린룸 자산 고지**: 본 프로젝트에 사용된 외부 오픈소스 자산(craft-pdf, hayro, krilla, canvaskit-wasm, egui 등)의 라이선스 및 출처는 [`ATTRIBUTION.md`](ATTRIBUTION.md)와 [`NOTICE`](NOTICE)에 투명하게 기재되어 있습니다.
+- **기여 가이드**: 코드 기여 및 서브에이전트 거버넌스 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md)와 [`AGENTS.md`](AGENTS.md)를 참고해 주시기 바랍니다.
+- **버전 정책**: 본 프로젝트는 엄격한 2계층 시맨틱 버저닝을 따릅니다 ([`docs/VERSIONING_AND_COMMIT_POLICY.md`](docs/VERSIONING_AND_COMMIT_POLICY.md)).

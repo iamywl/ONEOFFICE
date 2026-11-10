@@ -22,12 +22,47 @@ pub enum ActiveDocumentKind {
 }
 
 /// A parsed paragraph in a loaded document.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DocParagraph {
     pub text: String,
     pub is_heading: bool,
     pub font_size: f32,
     pub is_bold: bool,
+    pub is_italic: bool,
+    pub is_underline: bool,
+    pub is_strikethrough: bool,
+    pub text_color: Color32,
+    pub highlight_color: Option<Color32>,
+    pub font_family: String,
+    pub align: egui::Align,
+}
+
+impl Default for DocParagraph {
+    fn default() -> Self {
+        Self {
+            text: String::new(),
+            is_heading: false,
+            font_size: 14.0,
+            is_bold: false,
+            is_italic: false,
+            is_underline: false,
+            is_strikethrough: false,
+            text_color: Color32::from_rgb(15, 23, 42),
+            highlight_color: None,
+            font_family: "Pretendard".to_string(),
+            align: egui::Align::LEFT,
+        }
+    }
+}
+
+impl DocParagraph {
+    #[must_use]
+    pub fn new(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            ..Default::default()
+        }
+    }
 }
 
 /// Image asset extracted from a DOCX or HWPX package.
@@ -85,7 +120,10 @@ pub struct TextFormatState {
     pub is_bold: bool,
     pub is_italic: bool,
     pub is_underline: bool,
+    pub is_strikethrough: bool,
     pub text_color: Color32,
+    pub highlight_color: Option<Color32>,
+    pub font_family: String,
     pub align: egui::Align,
 }
 
@@ -96,7 +134,10 @@ impl Default for TextFormatState {
             is_bold: false,
             is_italic: false,
             is_underline: false,
+            is_strikethrough: false,
             text_color: Color32::from_rgb(15, 23, 42),
+            highlight_color: None,
+            font_family: "Pretendard".to_string(),
             align: egui::Align::LEFT,
         }
     }
@@ -200,7 +241,28 @@ impl StudioApp {
             status_text: "ONEOFFICE Multi-Format Studio Ready (Zero COM · 100% Native)".to_string(),
             table_selected_cell: (1, 1),
             table_data: initial_table.clone(),
-            doc_model: None,
+            doc_model: Some(LoadedDocument {
+                title: "ONEOFFICE 2026 차세대 사업계획서 및 통합 제안".to_string(),
+                subtitle: "문서번호: ONEOFFICE-2026-KR01 | 순수 Rust 기반 HWPX/DOCX/XLSX 복합 개체 실측".to_string(),
+                paragraphs: vec![
+                    DocParagraph {
+                        text: "본 기술 보고서는 WordCraft 및 hanul-hwpx 엔진 내에 컨설팅급 제안서 도식화, 513개 엑셀 수식표, 26종 차트, 및 전자직인이 네이티브 그래픽 객체로 완벽히 통합 렌더링됨을 실측 검증합니다.".to_string(),
+                        is_heading: false,
+                        font_size: 13.0,
+                        is_bold: false,
+                        ..Default::default()
+                    },
+                    DocParagraph {
+                        text: "상단 서식 바 또는 각 문단의 빠른 컨트롤(▲/▼/복제/B/I/U/S/글자크기/색상/형광펜)을 통해 글자를 즉시 편집하고 스타일을 실시간으로 변경할 수 있습니다.".to_string(),
+                        is_heading: false,
+                        font_size: 13.0,
+                        is_bold: false,
+                        ..Default::default()
+                    },
+                ],
+                images: Vec::new(),
+                tables: Vec::new(),
+            }),
             spreadsheet_model: Some(LoadedSpreadsheet {
                 sheet_names: vec!["2026 사업예산".into(), "집행내역".into()],
                 active_sheet_index: 0,
@@ -785,6 +847,7 @@ impl StudioApp {
                             is_heading: is_h,
                             font_size: if is_h { 18.0 } else { 13.0 },
                             is_bold: is_h,
+                            ..Default::default()
                         });
                     }
 
@@ -913,6 +976,7 @@ impl StudioApp {
                                 is_heading: is_h,
                                 font_size: if is_h { 18.0 } else { 13.0 },
                                 is_bold: is_h,
+                                ..Default::default()
                             });
                         }
                     }
@@ -1331,7 +1395,21 @@ impl StudioApp {
 
             ui.separator();
 
-            // 3. Paragraph Style & Font Styling Group
+            // 3. Paragraph Style, Font Family & Font Styling Group
+            egui::ComboBox::from_id_salt("font_family_combo")
+                .selected_text(&self.format_state.font_family)
+                .width(85.0)
+                .show_ui(ui, |ui| {
+                    for family in ["Pretendard", "Apple SD Gothic Neo", "맑은 고딕", "나눔고딕", "바탕체", "모노스페이스"] {
+                        let is_sel = self.format_state.font_family == family;
+                        if ui.selectable_label(is_sel, family).clicked() {
+                            self.push_undo_snapshot();
+                            self.format_state.font_family = family.to_string();
+                            self.apply_format_to_active_paragraph();
+                        }
+                    }
+                });
+
             let current_style = if self.format_state.font_size >= 22.0 {
                 "제목 1"
             } else if self.format_state.font_size >= 18.0 {
@@ -1344,7 +1422,7 @@ impl StudioApp {
 
             egui::ComboBox::from_id_salt("para_style_combo")
                 .selected_text(current_style)
-                .width(70.0)
+                .width(65.0)
                 .show_ui(ui, |ui| {
                     if ui.selectable_label(self.format_state.font_size == 22.0, "제목 1 (22pt)").clicked() {
                         self.push_undo_snapshot();
@@ -1422,6 +1500,17 @@ impl StudioApp {
                 self.apply_format_to_active_paragraph();
             }
 
+            // Strikethrough toggle
+            let strike_resp = ui.selectable_label(
+                self.format_state.is_strikethrough,
+                RichText::new(" S ").strikethrough(),
+            );
+            if strike_resp.clicked() {
+                self.push_undo_snapshot();
+                self.format_state.is_strikethrough = !self.format_state.is_strikethrough;
+                self.apply_format_to_active_paragraph();
+            }
+
             // Text color selector
             egui::ComboBox::from_id_salt("text_color_combo")
                 .selected_text(if self.format_state.text_color == Color32::from_rgb(30, 64, 175) {
@@ -1430,10 +1519,12 @@ impl StudioApp {
                     "빨강"
                 } else if self.format_state.text_color == Color32::from_rgb(4, 120, 87) {
                     "초록"
+                } else if self.format_state.text_color == Color32::from_rgb(124, 58, 237) {
+                    "보라"
                 } else {
                     "검정"
                 })
-                .width(60.0)
+                .width(55.0)
                 .show_ui(ui, |ui| {
                     if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(15, 23, 42), "검정").clicked() {
                         self.push_undo_snapshot();
@@ -1455,17 +1546,57 @@ impl StudioApp {
                         self.format_state.text_color = Color32::from_rgb(4, 120, 87);
                         self.apply_format_to_active_paragraph();
                     }
+                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(124, 58, 237), "보라").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.text_color = Color32::from_rgb(124, 58, 237);
+                        self.apply_format_to_active_paragraph();
+                    }
+                });
+
+            // Highlight (형광펜) selector
+            egui::ComboBox::from_id_salt("highlight_combo")
+                .selected_text(match self.format_state.highlight_color {
+                    Some(c) if c == Color32::from_rgb(254, 240, 138) => "형광:노랑",
+                    Some(c) if c == Color32::from_rgb(187, 247, 208) => "형광:연두",
+                    Some(c) if c == Color32::from_rgb(186, 230, 253) => "형광:하늘",
+                    _ => "형광펜",
+                })
+                .width(65.0)
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(self.format_state.highlight_color.is_none(), "없음").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.highlight_color = None;
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(254, 240, 138)), "노랑").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.highlight_color = Some(Color32::from_rgb(254, 240, 138));
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(187, 247, 208)), "연두").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.highlight_color = Some(Color32::from_rgb(187, 247, 208));
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(186, 230, 253)), "하늘").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.highlight_color = Some(Color32::from_rgb(186, 230, 253));
+                        self.apply_format_to_active_paragraph();
+                    }
                 });
 
             // Alignment buttons
             if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "<").on_hover_text("왼쪽 정렬").clicked() {
                 self.format_state.align = egui::Align::LEFT;
+                self.apply_format_to_active_paragraph();
             }
             if ui.selectable_label(self.format_state.align == egui::Align::Center, "C").on_hover_text("가운데 정렬").clicked() {
                 self.format_state.align = egui::Align::Center;
+                self.apply_format_to_active_paragraph();
             }
             if ui.selectable_label(self.format_state.align == egui::Align::RIGHT, ">").on_hover_text("오른쪽 정렬").clicked() {
                 self.format_state.align = egui::Align::RIGHT;
+                self.apply_format_to_active_paragraph();
             }
 
             ui.separator();
@@ -1481,6 +1612,13 @@ impl StudioApp {
                                 is_heading: false,
                                 font_size: self.format_state.font_size,
                                 is_bold: self.format_state.is_bold,
+                                is_italic: self.format_state.is_italic,
+                                is_underline: self.format_state.is_underline,
+                                is_strikethrough: self.format_state.is_strikethrough,
+                                text_color: self.format_state.text_color,
+                                highlight_color: self.format_state.highlight_color,
+                                font_family: self.format_state.font_family.clone(),
+                                align: self.format_state.align,
                             });
                             self.active_paragraph_idx = Some(doc.paragraphs.len() - 1);
                             self.is_dirty = true;
@@ -1630,6 +1768,13 @@ impl StudioApp {
         {
             para.font_size = self.format_state.font_size;
             para.is_bold = self.format_state.is_bold;
+            para.is_italic = self.format_state.is_italic;
+            para.is_underline = self.format_state.is_underline;
+            para.is_strikethrough = self.format_state.is_strikethrough;
+            para.text_color = self.format_state.text_color;
+            para.highlight_color = self.format_state.highlight_color;
+            para.font_family = self.format_state.font_family.clone();
+            para.align = self.format_state.align;
             self.is_dirty = true;
         }
     }
@@ -1687,6 +1832,14 @@ impl StudioApp {
 
                     let current_font_size = self.format_state.font_size;
                     let current_is_bold = self.format_state.is_bold;
+                    let current_is_italic = self.format_state.is_italic;
+                    let current_is_underline = self.format_state.is_underline;
+                    let current_is_strikethrough = self.format_state.is_strikethrough;
+                    let current_text_color = self.format_state.text_color;
+                    let current_highlight = self.format_state.highlight_color;
+                    let current_font_family = self.format_state.font_family.clone();
+                    let current_align = self.format_state.align;
+
                     let mut add_new_para = false;
                     let mut insert_table = false;
                     let mut insert_chart = false;
@@ -1703,16 +1856,23 @@ impl StudioApp {
                                 self.is_dirty = true;
                             }
                         });
-                        ui.label(
-                            RichText::new(&doc.subtitle)
-                                .color(Color32::from_rgb(100, 116, 139))
-                                .size(11.0),
-                        );
+                        let subtitle_edit = egui::TextEdit::singleline(&mut doc.subtitle)
+                            .font(egui::FontId::proportional(11.0))
+                            .text_color(Color32::from_rgb(100, 116, 139))
+                            .frame(egui::Frame::NONE);
+                        if ui.add(subtitle_edit).changed() {
+                            self.is_dirty = true;
+                        }
                         ui.separator();
                         ui.add_space(8.0);
 
-                        // Render parsed paragraphs with real in-place multiline editing
+                        // Render parsed paragraphs with real in-place multiline editing and quick mini-HUD
+                        let mut move_up_idx = None;
+                        let mut move_down_idx = None;
+                        let mut duplicate_idx = None;
                         let mut delete_idx = None;
+                        let total_paras = doc.paragraphs.len();
+
                         for (idx, para) in doc.paragraphs.iter_mut().enumerate() {
                             let clean_text = para.text.replace('\u{FFFC}', "").replace("[]", "");
                             if clean_text.trim().is_empty() {
@@ -1720,38 +1880,144 @@ impl StudioApp {
                             }
                             let is_active = self.active_paragraph_idx == Some(idx);
                             if is_active {
-                                ui.horizontal(|ui| {
-                                    let edit = egui::TextEdit::multiline(&mut para.text)
-                                        .desired_rows(1)
-                                        .desired_width(f32::INFINITY)
-                                        .text_color(Color32::from_rgb(30, 41, 59))
-                                        .frame(egui::Frame::NONE)
-                                        .font(egui::FontId::proportional(para.font_size));
-                                    let resp = ui.add(edit);
-                                    if resp.changed() {
-                                        self.is_dirty = true;
-                                    }
-                                    if ui.small_button("X").on_hover_text("문단 삭제").clicked() {
-                                        delete_idx = Some(idx);
-                                    }
-                                });
+                                egui::Frame::group(ui.style())
+                                    .fill(Color32::from_rgba_premultiplied(241, 245, 249, 180))
+                                    .stroke(egui::Stroke::new(1.0, StudioTheme::brand_accent()))
+                                    .inner_margin(8.0)
+                                    .show(ui, |ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.label(
+                                                RichText::new(format!("문단 #{}", idx + 1))
+                                                    .size(11.0)
+                                                    .strong()
+                                                    .color(StudioTheme::brand_accent()),
+                                            );
+
+                                            if idx > 0 && ui.small_button("▲").on_hover_text("위로 이동").clicked() {
+                                                move_up_idx = Some(idx);
+                                            }
+                                            if idx + 1 < total_paras && ui.small_button("▼").on_hover_text("아래로 이동").clicked() {
+                                                move_down_idx = Some(idx);
+                                            }
+                                            if ui.small_button("+ 복제").on_hover_text("문단 복제").clicked() {
+                                                duplicate_idx = Some(idx);
+                                            }
+
+                                            let b_color = if para.is_bold { StudioTheme::brand_accent() } else { Color32::GRAY };
+                                            if ui.small_button(RichText::new("B").strong().color(b_color)).on_hover_text("굵게").clicked() {
+                                                para.is_bold = !para.is_bold;
+                                                self.format_state.is_bold = para.is_bold;
+                                                self.is_dirty = true;
+                                            }
+
+                                            let i_color = if para.is_italic { StudioTheme::brand_accent() } else { Color32::GRAY };
+                                            if ui.small_button(RichText::new("I").italics().color(i_color)).on_hover_text("기울임").clicked() {
+                                                para.is_italic = !para.is_italic;
+                                                self.format_state.is_italic = para.is_italic;
+                                                self.is_dirty = true;
+                                            }
+
+                                            let u_color = if para.is_underline { StudioTheme::brand_accent() } else { Color32::GRAY };
+                                            if ui.small_button(RichText::new("U").underline().color(u_color)).on_hover_text("밑줄").clicked() {
+                                                para.is_underline = !para.is_underline;
+                                                self.format_state.is_underline = para.is_underline;
+                                                self.is_dirty = true;
+                                            }
+
+                                            let s_color = if para.is_strikethrough { StudioTheme::brand_accent() } else { Color32::GRAY };
+                                            if ui.small_button(RichText::new("S").strikethrough().color(s_color)).on_hover_text("취소선").clicked() {
+                                                para.is_strikethrough = !para.is_strikethrough;
+                                                self.format_state.is_strikethrough = para.is_strikethrough;
+                                                self.is_dirty = true;
+                                            }
+
+                                            if ui.small_button("-").on_hover_text("크기 축소").clicked() && para.font_size > 9.0 {
+                                                para.font_size -= 1.0;
+                                                self.format_state.font_size = para.font_size;
+                                                self.is_dirty = true;
+                                            }
+                                            ui.label(RichText::new(format!("{:.0}pt", para.font_size)).size(11.0));
+                                            if ui.small_button("+").on_hover_text("크기 확대").clicked() && para.font_size < 36.0 {
+                                                para.font_size += 1.0;
+                                                self.format_state.font_size = para.font_size;
+                                                self.is_dirty = true;
+                                            }
+
+                                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                if ui.small_button("X").on_hover_text("문단 삭제").clicked() {
+                                                    delete_idx = Some(idx);
+                                                }
+                                            });
+                                        });
+
+                                        ui.add_space(4.0);
+                                        let edit = egui::TextEdit::multiline(&mut para.text)
+                                            .desired_rows(1)
+                                            .desired_width(f32::INFINITY)
+                                            .text_color(para.text_color)
+                                            .frame(egui::Frame::NONE)
+                                            .font(egui::FontId::proportional(para.font_size));
+                                        let resp = ui.add(edit);
+                                        if resp.changed() {
+                                            self.is_dirty = true;
+                                        }
+                                    });
                             } else {
-                                let text_style = if para.is_bold {
-                                    RichText::new(&clean_text).strong().size(para.font_size)
-                                } else {
-                                    RichText::new(&clean_text).size(para.font_size)
-                                };
-                                let resp = ui.selectable_label(
-                                    false,
-                                    text_style.color(Color32::from_rgb(15, 23, 42)),
-                                );
+                                let mut text_style = RichText::new(&clean_text)
+                                    .size(para.font_size)
+                                    .color(para.text_color);
+                                if para.is_bold {
+                                    text_style = text_style.strong();
+                                }
+                                if para.is_italic {
+                                    text_style = text_style.italics();
+                                }
+                                if para.is_underline {
+                                    text_style = text_style.underline();
+                                }
+                                if para.is_strikethrough {
+                                    text_style = text_style.strikethrough();
+                                }
+                                if let Some(hl) = para.highlight_color {
+                                    text_style = text_style.background_color(hl);
+                                }
+
+                                let resp = ui.selectable_label(false, text_style);
                                 if resp.clicked() {
                                     self.active_paragraph_idx = Some(idx);
                                     self.format_state.font_size = para.font_size;
                                     self.format_state.is_bold = para.is_bold;
+                                    self.format_state.is_italic = para.is_italic;
+                                    self.format_state.is_underline = para.is_underline;
+                                    self.format_state.is_strikethrough = para.is_strikethrough;
+                                    self.format_state.text_color = para.text_color;
+                                    self.format_state.highlight_color = para.highlight_color;
+                                    self.format_state.font_family = para.font_family.clone();
+                                    self.format_state.align = para.align;
                                 }
                             }
                             ui.add_space(4.0);
+                        }
+
+                        if let Some(up) = move_up_idx
+                            && up > 0
+                        {
+                            doc.paragraphs.swap(up, up - 1);
+                            self.active_paragraph_idx = Some(up - 1);
+                            self.is_dirty = true;
+                        }
+                        if let Some(down) = move_down_idx
+                            && down + 1 < doc.paragraphs.len()
+                        {
+                            doc.paragraphs.swap(down, down + 1);
+                            self.active_paragraph_idx = Some(down + 1);
+                            self.is_dirty = true;
+                        }
+                        if let Some(dup) = duplicate_idx {
+                            let cloned = doc.paragraphs[dup].clone();
+                            doc.paragraphs.insert(dup + 1, cloned);
+                            self.active_paragraph_idx = Some(dup + 1);
+                            self.is_dirty = true;
                         }
                         if let Some(del) = delete_idx {
                             doc.paragraphs.remove(del);
@@ -1810,6 +2076,13 @@ impl StudioApp {
                                 is_heading: false,
                                 font_size: current_font_size,
                                 is_bold: current_is_bold,
+                                is_italic: current_is_italic,
+                                is_underline: current_is_underline,
+                                is_strikethrough: current_is_strikethrough,
+                                text_color: current_text_color,
+                                highlight_color: current_highlight,
+                                font_family: current_font_family,
+                                align: current_align,
                             });
                         }
 

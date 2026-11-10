@@ -100,17 +100,28 @@ mod tests {
             is_heading: false,
             font_size: 14.0,
             is_bold: false,
+            ..Default::default()
         });
         app.doc_model = Some(doc);
         app.active_paragraph_idx = Some(0);
 
         app.format_state.font_size = 20.0;
         app.format_state.is_bold = true;
+        app.format_state.is_italic = true;
+        app.format_state.is_underline = true;
+        app.format_state.is_strikethrough = true;
+        app.format_state.text_color = egui::Color32::from_rgb(185, 28, 28);
+        app.format_state.highlight_color = Some(egui::Color32::from_rgb(254, 240, 138));
         app.apply_format_to_active_paragraph();
 
         let updated_para = &app.doc_model.as_ref().unwrap().paragraphs[0];
         assert_eq!(updated_para.font_size, 20.0);
         assert!(updated_para.is_bold);
+        assert!(updated_para.is_italic);
+        assert!(updated_para.is_underline);
+        assert!(updated_para.is_strikethrough);
+        assert_eq!(updated_para.text_color, egui::Color32::from_rgb(185, 28, 28));
+        assert_eq!(updated_para.highlight_color, Some(egui::Color32::from_rgb(254, 240, 138)));
         assert!(app.is_dirty);
     }
 
@@ -166,6 +177,7 @@ mod tests {
             is_heading: false,
             font_size: 14.0,
             is_bold: false,
+            ..Default::default()
         });
         app.doc_model = Some(doc);
         app.active_doc = ActiveDocumentKind::Docx;
@@ -204,12 +216,14 @@ mod tests {
             is_heading: false,
             font_size: 14.0,
             is_bold: false,
+            ..Default::default()
         });
         doc.paragraphs.push(studio::DocParagraph {
             text: "두 번째 단락에서도 제안서 관련 요건을 다룹니다.".to_string(),
             is_heading: false,
             font_size: 14.0,
             is_bold: false,
+            ..Default::default()
         });
         app.doc_model = Some(doc);
         app.active_doc = ActiveDocumentKind::Docx;
@@ -242,6 +256,7 @@ mod tests {
             is_heading: false,
             font_size: 14.0,
             is_bold: false,
+            ..Default::default()
         });
         app.doc_model = Some(doc);
         app.active_doc = ActiveDocumentKind::Docx;
