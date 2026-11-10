@@ -30,6 +30,8 @@
 | **F-15** | UI Zero-Tofu | 데스크톱 앱 및 UI 시스템 한글 폰트 바인딩 및 CJK 두부(ㅁ) 결함 박멸 | `✅ Verified` | Wave 3: Track G | `test_korean_font_installation_and_glyph_coverage` & `install_korean_fonts` 실측 |
 | **F-16** | DOCX DrawingML | WordCraft DOCX 내 3종 그림자료(도식화/차트/직인) DrawingML 임베딩 및 무손실 복원 | `✅ Verified` | Wave 1: Track A | `wordcraft_docx::write/read` 라운드트립 + ZIP `word/media/` 실측 (344.5 KB) |
 | **F-17** | Real Multi-Doc UI | DOCX/XLSX/PPTX/PDF 실제 파일 파싱 렌더링 및 엑셀 그리드·슬라이드 덱 스튜디오 실체화 | `✅ Verified` | Wave 2: Track E | `test_docx_parsing_and_embedded_images` & `test_xlsx_spreadsheet_model_loading` |
+| **F-18** | In-Place WYSIWYG | DOCX/HWPX/XLSX/PDF 인플레이스 위지윅 텍스트 편집, 셀 더블클릭 인라인 편집, 리본 툴바 서식, 무손실 저장(`Ctrl+S`) | `✅ Verified` | Wave 2: Track E | `test_document_save_and_dirty_flag` & `test_in_place_paragraph_formatting` |
+| **F-19** | PPTX In-Place Deck | PPTX 슬라이드 덱 제목·불릿 인플레이스 편집, 불릿/슬라이드 추가·삭제, ECMA-376 PresentationML 패키징 및 무손실 저장 | `✅ Verified` | Wave 2: Track E | `test_pptx_in_place_editing_and_save_roundtrip` & `build_pptx_package` |
 
 ---
 

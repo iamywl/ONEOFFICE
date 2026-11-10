@@ -76,6 +76,86 @@ mod tests {
     }
 
     #[test]
+    fn test_document_save_and_dirty_flag() {
+        let mut app = StudioApp::new();
+        app.active_doc = ActiveDocumentKind::Docx;
+        app.current_file_path = Some("/tmp/oneoffice_test_save.docx".to_string());
+        app.is_dirty = true;
+
+        let result = app.save_current_document();
+        assert!(result.is_ok(), "Document save pipeline must succeed");
+        assert!(!app.is_dirty, "Dirty flag must be cleared after save");
+        assert!(std::path::Path::new("/tmp/oneoffice_test_save.docx").exists());
+        let _ = std::fs::remove_file("/tmp/oneoffice_test_save.docx");
+    }
+
+    #[test]
+    fn test_in_place_paragraph_formatting() {
+        let mut app = StudioApp::new();
+        let mut doc = studio::LoadedDocument::default();
+        doc.paragraphs.push(studio::DocParagraph {
+            text: "원본 단락".to_string(),
+            is_heading: false,
+            font_size: 14.0,
+            is_bold: false,
+        });
+        app.doc_model = Some(doc);
+        app.active_paragraph_idx = Some(0);
+
+        app.format_state.font_size = 20.0;
+        app.format_state.is_bold = true;
+        app.apply_format_to_active_paragraph();
+
+        let updated_para = &app.doc_model.as_ref().unwrap().paragraphs[0];
+        assert_eq!(updated_para.font_size, 20.0);
+        assert!(updated_para.is_bold);
+        assert!(app.is_dirty);
+    }
+
+    #[test]
+    fn test_pptx_in_place_editing_and_save_roundtrip() {
+        let mut app = StudioApp::new();
+        app.active_doc = ActiveDocumentKind::Pptx;
+        let test_path = "/tmp/oneoffice_test_save.pptx";
+        app.current_file_path = Some(test_path.to_string());
+
+        let mut pres = app.presentation_model.take().expect("Presentation model must exist");
+        pres.slides.clear();
+        pres.slides.push(studio::SlideItem {
+            slide_number: 1,
+            title: "수정된 첫 번째 슬라이드 제목".to_string(),
+            bullet_points: vec!["새로운 불릿 항목 추가".to_string()],
+            template_id: "problem-comparison-to-solution".to_string(),
+        });
+        pres.slides.push(studio::SlideItem {
+            slide_number: 2,
+            title: "두 번째 슬라이드: 아키텍처".to_string(),
+            bullet_points: vec!["순수 Rust 백엔드 연동".to_string(), "ECMA-376 패키징".to_string()],
+            template_id: "problem-comparison-to-solution".to_string(),
+        });
+        app.presentation_model = Some(pres);
+        app.is_dirty = true;
+
+        let save_res = app.save_current_document();
+        assert!(save_res.is_ok(), "PPTX save must succeed: {:?}", save_res);
+        assert!(!app.is_dirty);
+
+        let saved_bytes = std::fs::read(test_path).expect("Saved PPTX must exist on disk");
+        assert!(saved_bytes.len() > 1000, "PPTX package must have valid size");
+
+        // Verify round-trip loading
+        let mut reload_app = StudioApp::new();
+        reload_app.load_pptx_bytes(&saved_bytes);
+        let loaded = reload_app.presentation_model.expect("Loaded presentation must exist");
+        assert_eq!(loaded.slides.len(), 2, "Round-tripped PPTX must have 2 slides");
+        assert_eq!(loaded.slides[0].title, "수정된 첫 번째 슬라이드 제목");
+        assert!(loaded.slides[0].bullet_points.iter().any(|b| b == "새로운 불릿 항목 추가"));
+        assert_eq!(loaded.slides[1].title, "두 번째 슬라이드: 아키텍처");
+
+        let _ = std::fs::remove_file(test_path);
+    }
+
+    #[test]
     fn test_formula_hud_function_lookup() {
         let hud = FormulaHudWidget::new("B2", "=AVERAGE(");
         assert_eq!(hud.cell_address, "B2");
