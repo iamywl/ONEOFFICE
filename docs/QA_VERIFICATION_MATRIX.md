@@ -25,6 +25,8 @@
 | **F-10** | AI MCP | 통합 `oneoffice-mcp` (`diagram.compose`, `pdf.sign`, `visual.verify_page`) | `✅ Verified` | Wave 2: Track F | JSON-RPC 2.0 stdio + 5종 도구 + AI 폐루프 시각 자가검증 통과 |
 | **F-11** | VSC Ext | 올인원 `oneoffice-vscode` VSIX (`.hwpx`, `.docx`, `.xlsx`, `.pptx`, `.pdf`) | `✅ Verified` | Wave 3: Track G | 5종 Custom Editor 등록 + 7개 통합 커맨드 + 매니페스트 검증 |
 | **F-12** | 3-OS Native | `macOS`(`.app`), `Windows`(`.exe`/MSI), `Linux`(`AppImage`/`.deb`) 네이티브 | `✅ Verified` | Wave 3: Track G | `apps/oneoffice-desktop` eframe 실행기 + 드래그앤드롭 + 3대 OS CI 매트릭스 완료 |
+| **F-13** | Dummy Pipeline | 5대 포맷(`PDF`/`HWPX`/`XLSX`/`DOCX`/`PPTX`) 더미 문서 생성 및 2차 규격 검증 | `✅ Verified` | Wave 1-3 All | `scripts/qa/dummy-docs-pipeline.mjs` (5종 전수 바이트/구조 검증 통과) |
+| **F-14** | Doc Integrity | 리드미 및 문서 자산 무결성 자동 검증기 (404 방지, 서브모듈/더미 전수 감사) | `✅ Verified` | Wave 1-3 All | `scripts/qa/verify-readme.mjs` (README + 4개 서브모듈 + 더미문서 100% 통과) |
 
 ---
 
@@ -33,14 +35,14 @@
 새로운 스프린트 기능이 검증될 때마다 아래 경로에 실측 Retina 스크린샷을 커밋하고 `README.md` 갤러리를 최신화합니다:
 
 ### 확보된 실측 캡처 (Verified Agile Proofs)
-- [x] **HWPX 위지윅 에디터 & 플로팅 글래스 표 HUD**: `hanul-hwpx/docs/assets/screenshots/10_table_floating_glass_hud.png`
-- [x] **HWPX 라이트/다크 듀얼 테마 격리**: `hanul-hwpx/docs/assets/screenshots/page_setup_dark_mode_fixed.png`
-- [x] **Word 네이티브 글래스 UI & 직인(`BehindText`) 합성**: `OPEN_WORD/qa_real_macos_native_window_stamp_behind.png`
-- [x] **Excel 수식 자동완성 & 차트 스튜디오**: `OPEN_EXCELL/docs/images/qa_proof_macos_insert_chart.png`
-- [x] **PPTX 네이티브/WASM 슬라이드 & 도형 포맷 스튜디오**: `OPEN_PPTX/assets/images/native-glass-app.png`
-- [x] **신규 제안서 시맨틱 도식화 HiDPI 실측**: `docs/assets/qa/wave1_hwpx_proposal_diagram.png` (Track B: `oneoffice-diagram` 3-Pass Constraint Layout)
+- [x] **HWPX 위지윅 에디터 & 플로팅 글래스 표 HUD**: `docs/assets/screenshots/01_hwpx_editor.png`, `02_hwpx_floating_hud.png`
+- [x] **HWPX 라이트/다크 듀얼 테마 격리**: `docs/assets/screenshots/03_hwpx_light_mode.png`, `04_hwpx_dark_mode.png`
+- [x] **Word 네이티브 글래스 UI & 직인(`BehindText`) 합성**: `docs/assets/screenshots/05_word_macos_native.png`, `06_word_behind_stamp.png`
+- [x] **Excel 513 수식 & 26종 벡터 차트 스튜디오**: `docs/assets/screenshots/07_excel_native_sales.png`, `08_excel_vscode_chart.png`
+- [x] **PPTX 네이티브/WASM 슬라이드 & 도형 포맷 스튜디오**: `docs/assets/screenshots/09_pptx_native_studio.png`, `10_pptx_vscode_webview.png`
+- [x] **신규 제안서 시맨틱 도식화 HiDPI 실측 (정방향 한글 타이포그래피)**: `docs/assets/qa/wave1_hwpx_proposal_diagram.png` (Track B: `oneoffice-diagram` 3-Pass Constraint Layout)
 - [x] **신규 표준 계약서 PDF 뷰어 & 투명 직인 날인 실측**: `docs/assets/qa/wave1_pdf_viewer_signature.png` (Track D: `oneoffice-pdf` Chroma-Key Alpha Matting)
-- [x] **신규 26종 엑셀 차트 벤치마크 실측**: `docs/assets/qa/wave1_excel_formula_chart.png` (Track A: `oneoffice-bridge` 26 Chart Kinds)
+- [x] **신규 26종 엑셀 차트 벤치마크 실측 (라벨·눈금·범례 한글 폰트 렌더링)**: `docs/assets/qa/wave1_excel_formula_chart.png` (Track A: `oneoffice-bridge` 26 Chart Kinds)
 
 ### 병렬 트랙별 실측 캡처 목표 (Upcoming Agile Proof Slots)
 - [ ] `docs/assets/qa/wave1_pdf_viewer_signature_light.png` & `_dark.png`: (Track D) PDF 뷰어 내 자필 서명 및 흰 배경 제거 도장 날인 화면

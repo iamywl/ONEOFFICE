@@ -918,7 +918,7 @@ fn rasterize_hidpi_png(
     } else {
         [0xFF, 0xFF, 0xFF, 0xFF]
     };
-    let rgba = gridcraft_chart::rasterize(&scaled, px_w, px_h, bg);
+    let mut rgba = gridcraft_chart::rasterize(&scaled, px_w, px_h, bg);
     let expected_len = (px_w as usize)
         .saturating_mul(px_h as usize)
         .saturating_mul(4);
@@ -929,11 +929,150 @@ fn rasterize_hidpi_png(
         )));
     }
 
+    render_chart_text_overlay(&mut rgba, px_w, px_h, &scaled);
+
     let mut png_bytes = Vec::new();
     image::codecs::png::PngEncoder::new(&mut png_bytes)
         .write_image(&rgba, px_w, px_h, image::ExtendedColorType::Rgba8)
         .map_err(|e| BridgeError::PngEncode(e.to_string()))?;
     Ok(png_bytes)
+}
+
+fn render_chart_text_overlay(
+    rgba: &mut [u8],
+    px_w: u32,
+    px_h: u32,
+    primitives: &[Prim],
+) {
+    if px_w > u16::MAX as u32 || px_h > u16::MAX as u32 || px_w == 0 || px_h == 0 {
+        return;
+    }
+    let u16_w = px_w as u16;
+    let u16_h = px_h as u16;
+
+    let total_pixels = (px_w as usize).saturating_mul(px_h as usize);
+    let mut overlay = vec![0u8; total_pixels.saturating_mul(4)];
+
+    let mut ctx = vello_cpu::RenderContext::new_with(
+        u16_w,
+        u16_h,
+        vello_cpu::RenderSettings {
+            num_threads: 0,
+            ..Default::default()
+        },
+    );
+
+    let fam = crate::fonts::default_korean_family().unwrap_or("Pretendard");
+    let regular_face = wordcraft_fonts::word::resolve(fam, false, false).face;
+    let bold_face = wordcraft_fonts::word::resolve(fam, true, false).face;
+
+    let mut any_text = false;
+
+    for prim in primitives {
+        if let Prim::Text {
+            x,
+            y,
+            text,
+            size,
+            color,
+            bold,
+            align,
+            valign,
+            rotation,
+        } = prim
+        {
+            if text.is_empty() || *size <= 0.0 {
+                continue;
+            }
+            any_text = true;
+
+            let face = if *bold { &bold_face } else { &regular_face };
+            let upem = if face.upem.is_finite() && face.upem > 0.0 {
+                face.upem
+            } else {
+                1000.0
+            };
+            let k = (*size as f64) / upem;
+
+            let glyphs = wordcraft_fonts::shape(face, text, &[], |c| c);
+            let total_width: f64 = glyphs.iter().map(|g| g.x_advance as f64 * k).sum();
+
+            let dx = match align {
+                HAlign::Left => 0.0,
+                HAlign::Center => -total_width * 0.5,
+                HAlign::Right => -total_width,
+            };
+
+            let cap = if face.cap_height.is_finite() && face.cap_height > 0.0 {
+                face.cap_height.clamp(upem * 0.3, upem)
+            } else {
+                upem * 0.7
+            };
+            let cap_pt = cap * k;
+
+            let dy = match valign {
+                VAlign::Top => cap_pt,
+                VAlign::Middle => cap_pt * 0.5,
+                VAlign::Bottom => 0.0,
+            };
+
+            let peniko_c = vello_cpu::peniko::Color::from_rgba8(color[0], color[1], color[2], color[3]);
+            ctx.set_paint(peniko_c);
+
+            let rot = *rotation as f64;
+            let anchor_x = *x as f64;
+            let anchor_y = *y as f64;
+
+            let base_tf = kurbo::Affine::translate((anchor_x, anchor_y))
+                * kurbo::Affine::rotate(rot)
+                * kurbo::Affine::translate((dx, dy));
+
+            let mut cur_x = 0.0;
+            for g in glyphs {
+                let gx = cur_x + g.x_offset as f64 * k;
+                let gy = -g.y_offset as f64 * k;
+                let tf = base_tf * kurbo::Affine::translate((gx, gy)) * kurbo::Affine::scale(k);
+                ctx.set_transform(tf);
+                ctx.fill_path(&face.glyph_outline(g.gid));
+                cur_x += g.x_advance as f64 * k;
+            }
+        }
+    }
+
+    if !any_text {
+        return;
+    }
+
+    ctx.flush();
+    let mut res = vello_cpu::Resources::new();
+    if let Some(pm) = vello_cpu::PixmapMut::new(u16_w, u16_h, &mut overlay) {
+        ctx.render(pm, &mut res);
+    }
+
+    // Alpha-blend overlay over original chart canvas
+    #[allow(clippy::chunks_exact_to_as_chunks, clippy::manual_checked_ops)]
+    for (dst, src) in rgba.chunks_exact_mut(4).zip(overlay.chunks_exact(4)) {
+        let sa = src[3] as u32;
+        if sa == 0 {
+            continue;
+        }
+        if sa == 255 {
+            dst.copy_from_slice(src);
+            continue;
+        }
+        let da = dst[3] as u32;
+        let inv_sa = 255 - sa;
+        let out_a = sa + (da * inv_sa + 127) / 255;
+        if out_a > 0 {
+            for c in 0..3 {
+                let s_col = src[c] as u32;
+                let d_col = dst[c] as u32;
+                let num = s_col * sa + (d_col * da * inv_sa + 127) / 255;
+                dst[c] = (num / out_a).min(255) as u8;
+            }
+            dst[3] = out_a.min(255) as u8;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------

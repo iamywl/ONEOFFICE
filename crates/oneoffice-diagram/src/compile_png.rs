@@ -135,7 +135,7 @@ pub fn compile_png(scene: &PositionedScene, scale: f32) -> Result<Vec<u8>, Diagr
                             let gy = (*y - y_offset_pt) as f64 * s;
 
                             let transform = Affine::translate((gx, gy))
-                                * Affine::scale_non_uniform(glyph_k, -glyph_k);
+                                * Affine::scale(glyph_k);
                             ctx.set_transform(transform);
                             ctx.fill_path(&face.glyph_outline(gid));
                             cur_adv += advance_pt;
@@ -154,7 +154,7 @@ pub fn compile_png(scene: &PositionedScene, scale: f32) -> Result<Vec<u8>, Diagr
                                 let gy = (*y - y_offset_pt) as f64 * s;
 
                                 let transform = Affine::translate((gx, gy))
-                                    * Affine::scale_non_uniform(glyph_k, -glyph_k);
+                                    * Affine::scale(glyph_k);
                                 ctx.set_transform(transform);
                                 ctx.fill_path(&outline);
                             }
@@ -321,7 +321,7 @@ pub fn compile_png(scene: &PositionedScene, scale: f32) -> Result<Vec<u8>, Diagr
                             let gy = origin_y - y_offset_pt as f64 * s;
 
                             let transform = Affine::translate((gx, gy))
-                                * Affine::scale_non_uniform(glyph_k, -glyph_k);
+                                * Affine::scale(glyph_k);
                             ctx.set_transform(transform);
                             ctx.fill_path(&face.glyph_outline(gid));
                             cur_adv += advance_pt;
@@ -340,7 +340,7 @@ pub fn compile_png(scene: &PositionedScene, scale: f32) -> Result<Vec<u8>, Diagr
                                 let gy = origin_y - y_offset_pt as f64 * s;
 
                                 let transform = Affine::translate((gx, gy))
-                                    * Affine::scale_non_uniform(glyph_k, -glyph_k);
+                                    * Affine::scale(glyph_k);
                                 ctx.set_transform(transform);
                                 ctx.fill_path(&outline);
                             }

@@ -59,6 +59,12 @@ if (mode === "all" || mode === "rust") {
     "test",
     "--workspace",
   ]);
+  runStep("Tier 2C: 5-Format Dummy Document Round-Trip Pipeline", "node", [
+    "scripts/qa/dummy-docs-pipeline.mjs",
+  ]);
+  runStep("Tier 5B: Documentation & Showcase Asset Integrity", "node", [
+    "scripts/qa/verify-readme.mjs",
+  ]);
 }
 
 if (mode === "all" || mode === "hwpx") {

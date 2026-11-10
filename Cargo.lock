@@ -2264,10 +2264,12 @@ dependencies = [
  "gridcraft-numfmt",
  "gridcraft-xlsx",
  "image",
+ "kurbo",
  "quick-xml",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+ "vello_cpu 0.2.0",
  "wordcraft-fonts",
  "zip",
 ]
@@ -2323,6 +2325,8 @@ dependencies = [
  "serde_json",
  "sha2",
  "thiserror 2.0.21",
+ "wordcraft-doc",
+ "wordcraft-docx",
  "zip",
 ]
 

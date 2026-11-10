@@ -22,3 +22,5 @@ oneoffice-diagram = { workspace = true }
 
 [dev-dependencies]
 oneoffice-pdf = { workspace = true }
+wordcraft-doc = { workspace = true }
+wordcraft-docx = { workspace = true }

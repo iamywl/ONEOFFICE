@@ -420,7 +420,7 @@ fn covers_korean(face: &FontFace) -> bool {
     KOREAN_PROBE_CHARS.iter().all(|&ch| face.covers(ch))
 }
 
-fn default_korean_family() -> Option<&'static str> {
+pub(crate) fn default_korean_family() -> Option<&'static str> {
     static RESOLVED: OnceLock<Option<String>> = OnceLock::new();
     RESOLVED
         .get_or_init(|| {

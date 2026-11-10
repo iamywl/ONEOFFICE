@@ -35,48 +35,44 @@
 - **시맨틱 제안서 도식화 DSL (`DiagramSpec`)**: 한글 글리프 폭을 실측(`harfrust`)하여 글자 잘림(Overflow) 없이 비교 카드·KPI 콜아웃·프로세스 화살표를 자동 배치하며, 사람과 AI 에이전트 모두가 쉽게 수정할 수 있습니다.
 - **내장 PDF 뷰어 & 전자서명/직인 날인**: 외부 유료 PDF 도구나 GPL/AGPL 오염 없이 순수 Rust(`craft-pdf`)로 PDF를 열람하고, **자필 서명 및 흰 배경 도장 자동 투명화 날인**까지 한 번에 끝냅니다.
 
-<p align="center">
-  <img src="docs/assets/oneoffice-proposal-diagram-sample.svg" alt="ONEOFFICE Proposal Infographic Philosophy" width="82%"/>
-</p>
-
 ---
 
 ## 📸 시각 쇼케이스 & 실측 캡처 갤러리
 
-> ONEOFFICE는 **애자일(Agile) 방식**으로 지속 개발되며, 추측이 아닌 **실제 구동 화면 캡처(라이트/다크 양방향 실측)** 로 기능을 증명합니다. 아래는 현재 워크스페이스에 통합된 4대 기반 엔진의 실제 구동 캡처이며, 스프린트 진행에 따라 통합 서브캔버스 및 PDF 서명 캡처가 계속 추가됩니다 ([전체 캡처 체크리스트 보기](docs/QA_VERIFICATION_MATRIX.md)).
+> ONEOFFICE는 **애자일(Agile) 방식**으로 지속 개발되며, 추측이나 마케팅용 예시 도식이 아닌 **실제 구동 화면 캡처(라이트/다크 양방향 실측)** 로 기능을 증명합니다. 아래는 현재 워크스페이스에 통합된 4대 기반 엔진 및 신규 PDF 서명 엔진의 실제 구동 캡처입니다 ([전체 캡처 체크리스트 보기](docs/QA_VERIFICATION_MATRIX.md)).
 
 ### 1. 한글 HWPX / HWP 위지윅 스튜디오 & 플로팅 글래스 HUD (`hanul-hwpx`)
 | HWPX 메인 위지윅 에디터 | 표 컨텍스트 플로팅 글래스 캡슐 (`F5` / 병합 / 크기 조절) |
 | :---: | :---: |
-| ![HWPX Main Editor](hanul-hwpx/docs/assets/screenshots/01_main_editor_ui.png) | ![HWPX Floating Glass Table HUD](hanul-hwpx/docs/assets/screenshots/10_table_floating_glass_hud.png) |
+| ![HWPX Main Editor](docs/assets/screenshots/01_hwpx_editor.png) | ![HWPX Floating Glass Table HUD](docs/assets/screenshots/02_hwpx_floating_hud.png) |
 
 | 라이트 모드 (`Alt+L` / `F7` 고대비 격리) | 다크 모드 (용지 백색 유지 & 모달 WCAG AAA 대비) |
 | :---: | :---: |
-| ![HWPX Light Mode](hanul-hwpx/docs/assets/screenshots/page_setup_light_mode_fixed.png) | ![HWPX Dark Mode](hanul-hwpx/docs/assets/screenshots/page_setup_dark_mode_fixed.png) |
+| ![HWPX Light Mode](docs/assets/screenshots/03_hwpx_light_mode.png) | ![HWPX Dark Mode](docs/assets/screenshots/04_hwpx_dark_mode.png) |
 
 ### 2. 워드 다단 조판 & 직인(`BehindText`) 투명 레이어링 (`OPEN_WORD`)
 | macOS 네이티브 Frosted Glass 워드 스튜디오 | 공문서/계약서 본문 뒤 직인(`BehindText`) 알파 합성 |
 | :---: | :---: |
-| ![OPEN_WORD macOS Native](OPEN_WORD/qa_real_macos_native_window_capture.png) | ![OPEN_WORD Behind-Text Stamp](OPEN_WORD/qa_real_macos_native_window_stamp_behind.png) |
+| ![OPEN_WORD macOS Native](docs/assets/screenshots/05_word_macos_native.png) | ![OPEN_WORD Behind-Text Stamp](docs/assets/screenshots/06_word_behind_stamp.png) |
 
 ### 3. 엑셀 513개 수식 엔진 & 26종 벡터 차트 스튜디오 (`OPEN_EXCELL`)
 | 네이티브 스프레드시트 & 실시간 벡터 차트 | VS Code 확장 내 수식바 & 차트 삽입 |
 | :---: | :---: |
-| ![OPEN_EXCELL Native Sales & Chart](OPEN_EXCELL/docs/images/hero-sales.png) | ![OPEN_EXCELL VS Code Chart](OPEN_EXCELL/docs/images/qa_proof_macos_insert_chart.png) |
+| ![OPEN_EXCELL Native Sales & Chart](docs/assets/screenshots/07_excel_native_sales.png) | ![OPEN_EXCELL VS Code Chart](docs/assets/screenshots/08_excel_vscode_chart.png) |
 
 ### 4. 프레젠테이션 & 정밀 도형·다이어그램 스튜디오 (`OPEN_PPTX`)
 | 네이티브 글래스 프레젠테이션 스튜디오 | VS Code 1:1 WASM 슬라이드 & 도형 서식 편집 |
 | :---: | :---: |
-| ![OPEN_PPTX Native Studio](OPEN_PPTX/assets/images/native-glass-app.png) | ![OPEN_PPTX VS Code Webview](OPEN_PPTX/assets/images/qa-live-vscode-webview.png) |
+| ![OPEN_PPTX Native Studio](docs/assets/screenshots/09_pptx_native_studio.png) | ![OPEN_PPTX VS Code Webview](docs/assets/screenshots/10_pptx_vscode_webview.png) |
 
-### 5. 신규 통합 코어 실측 캡처 (Wave 1: 제안서 도식화 · PDF 뷰어/직인 날인 · 26종 차트 브릿지)
+### 5. 신규 통합 코어 실측 캡처 (제안서 도식화 · PDF 직인 날인 · 26종 엑셀 차트)
 | 컨설팅급 제안서 도식화 (`oneoffice-diagram` 3-Pass 실측) | 순수 Rust PDF 뷰어 & 직인 날인 (`oneoffice-pdf` Chroma-Key) |
 | :---: | :---: |
-| ![ONEOFFICE Proposal Infographic](docs/assets/qa/wave1_hwpx_proposal_diagram.png) | ![ONEOFFICE PDF Viewer & Stamp](docs/assets/qa/wave1_pdf_viewer_signature.png) |
+| <img src="docs/assets/qa/wave1_hwpx_proposal_diagram.png" alt="ONEOFFICE Proposal Diagram" width="100%"/> | <img src="docs/assets/qa/wave1_pdf_viewer_signature.png" alt="ONEOFFICE PDF Viewer & Stamp" width="100%"/> |
 
-| 26종 벡터 차트 & 513개 엑셀 수식표 브릿지 (`oneoffice-bridge`) |
+| 26종 벡터 차트 & 513개 엑셀 수식표 브릿지 (`oneoffice-bridge` 폰트 오버레이 실측) |
 | :---: |
-| ![ONEOFFICE Chart Engine Benchmark](docs/assets/qa/wave1_excel_formula_chart.png) |
+| <img src="docs/assets/qa/wave1_excel_formula_chart.png" alt="ONEOFFICE 26-Type Chart Benchmark" width="85%"/> |
 
 ---
 

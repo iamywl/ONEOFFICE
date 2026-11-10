@@ -22,5 +22,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 image = { workspace = true }
+kurbo = { workspace = true }
+vello_cpu = { workspace = true }
 zip = { workspace = true }
 quick-xml = { workspace = true }

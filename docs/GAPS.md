@@ -21,6 +21,8 @@
 | **GAP-WORD-01** | Word | `BehindText` 직인 위 본문 텍스트 클릭 시 직인 히트테스트가 간섭받거나 선택 불가 | `P1` | `OPEN_WORD/crates/layout/src/hit.rs:418` | `🟢 Resolved` |
 | **GAP-DIAG-01** | Diagram | 한글 어절 줄바꿈 시 카드 패딩 경계에서의 1글자 흘림(Orphan line-wrap) 현상 | `P1` | `tests/fixtures/korean_proposal_ref.hwpx` | `🟢 Resolved` |
 | **GAP-PDF-01** | PDF | 스캔/공공기관 PDF의 변환 행렬(`cm`) 미복원으로 인한 서명 XObject 오배치 위험 | `P1` | 은행 발급 거래내역서 / 공공기관 신청서 PDF | `🟢 Resolved` |
+| **GAP-DIAG-02** | Diagram | `compile_png.rs`에서 `scale_non_uniform(k, -k)` 이중 Y-flip으로 인한 도식화 글리프 상하 반전 | `P0` | `crates/oneoffice-diagram/src/compile_png.rs:138` | `🟢 Resolved` |
+| **GAP-EXCEL-01** | Excel/Chart | `gridcraft_chart::rasterize`의 `Prim::Text` 스텁으로 인한 차트 PNG 축/라벨/범례 텍스트 누락 | `P0` | `crates/oneoffice-bridge/src/chart.rs:904` | `🟢 Resolved` |
 
 ---
 
