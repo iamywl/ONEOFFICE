@@ -27,10 +27,11 @@ VS Code 마켓플레이스 또는 단일 `.vsix` 패키지로 설치하여 `.hwp
 
 ```bash
 # 로컬 빌드된 올인원 확장 설치
-code --install-extension extensions/oneoffice-vscode/oneoffice-vscode-0.1.0.vsix
+code --install-extension extensions/oneoffice-vscode/oneoffice-vscode-0.1.0-alpha.1.vsix
 ```
 - 지원 파일 확장자: `.hwpx`, `.hwp`, `.hml`, `.docx`, `.doc`, `.xlsx`, `.xls`, `.csv`, `.pptx`, **`.pdf`**
 - 별도의 한컴오피스나 MS Office 설치 없이 오프라인에서 100% 독립 구동됩니다.
+- 📖 **공식 가이드**: 상세 설치 및 사용법은 **[사용자 매뉴얼 (docs/USER_GUIDE.md)](docs/USER_GUIDE.md)**, 마켓플레이스 배포는 **[VSIX 배포 가이드 (docs/VSCODE_EXTENSION_DISTRIBUTION_GUIDE.md)](docs/VSCODE_EXTENSION_DISTRIBUTION_GUIDE.md)**를 참고하세요.
 
 ### 방법 B — 3대 OS 네이티브 데스크톱 앱 (`apps/oneoffice-desktop`)
 Win32 COM이나 OS 종속 라이브러리 없이, 순수 Rust(`egui`/`wgpu`)로 컴파일된 네이티브 앱을 실행합니다.
@@ -360,6 +361,8 @@ node scripts/qa/run-all-gates.mjs
 ```text
 ONEOFFICE/
 ├── docs/                                    # 마스터 아키텍처 및 공식 V&V 문서
+│   ├── USER_GUIDE.md                        # 사용자 매뉴얼 및 전체 설치/상세 사용 가이드
+│   ├── VSCODE_EXTENSION_DISTRIBUTION_GUIDE.md # VS Code VSIX 패키징 및 마켓플레이스 배포 가이드
 │   ├── MASTER_ARCHITECTURE_PLAN.md          # 6단계 마스터 아키텍처 및 구현 로드맵
 │   ├── V_AND_V_REPORT.md                    # IEEE Std 1012 공식 V&V 실행 결과 보고서
 │   ├── QA_VERIFICATION_MATRIX.md            # 6단계 무신뢰 실측 검증 매트릭스

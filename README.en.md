@@ -27,8 +27,9 @@ Open, edit, and sign `.hwpx`, `.docx`, `.xlsx`, `.pptx`, and `.pdf` inside offli
 
 ```bash
 # Install locally built all-in-one extension
-code --install-extension extensions/oneoffice-vscode/oneoffice-vscode-0.1.0.vsix
+code --install-extension extensions/oneoffice-vscode/oneoffice-vscode-0.1.0-alpha.1.vsix
 ```
+- 📖 **Official Guides**: Detailed setup & operations in **[User Guide (docs/USER_GUIDE.md)](docs/USER_GUIDE.md)**, and marketplace release steps in **[VSIX Distribution Guide (docs/VSCODE_EXTENSION_DISTRIBUTION_GUIDE.md)](docs/VSCODE_EXTENSION_DISTRIBUTION_GUIDE.md)**.
 
 ### Method B — Cross-Platform Native Desktop App (`apps/oneoffice-desktop`)
 Zero Win32 COM, zero Hancom DLL dependencies. Pure Rust (`egui`/`wgpu`) standalone app.
@@ -279,6 +280,8 @@ node scripts/qa/run-all-gates.mjs
 
 ## 🗺️ Workspace Directory Map & Component Links
 
+- [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) — Comprehensive user manual & operation guide.
+- [`docs/VSCODE_EXTENSION_DISTRIBUTION_GUIDE.md`](docs/VSCODE_EXTENSION_DISTRIBUTION_GUIDE.md) — VS Code VSIX packaging & marketplace distribution guide.
 - [`docs/MASTER_ARCHITECTURE_PLAN.md`](docs/MASTER_ARCHITECTURE_PLAN.md) — 6-phase master architecture plan.
 - [`docs/V_AND_V_REPORT.md`](docs/V_AND_V_REPORT.md) — IEEE Std 1012 official V&V report.
 - [`docs/QA_VERIFICATION_MATRIX.md`](docs/QA_VERIFICATION_MATRIX.md) — 6-tier empirical verification matrix.

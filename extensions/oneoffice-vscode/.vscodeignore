@@ -1,0 +1,7 @@
+src/**
+test*.mjs
+build.mjs
+node_modules/**
+.git/**
+**/*.map
+.DS_Store
