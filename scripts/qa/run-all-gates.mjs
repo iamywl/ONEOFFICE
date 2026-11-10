@@ -59,6 +59,13 @@ if (mode === "all" || mode === "rust") {
     "test",
     "--workspace",
   ]);
+  runStep("Tier 4B: Korean Font Zero-Tofu & Desktop Tests", "cargo", [
+    "test",
+    "-p",
+    "oneoffice-ui",
+    "-p",
+    "oneoffice-desktop",
+  ]);
   runStep("Tier 2C: 5-Format Dummy Document Round-Trip Pipeline", "node", [
     "scripts/qa/dummy-docs-pipeline.mjs",
   ]);

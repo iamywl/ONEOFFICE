@@ -1,7 +1,38 @@
 //! Frosted Glass dual-theme tokens and WCAG AAA compliant styling for ONEOFFICE.
 
-use egui::{Color32, Stroke, Visuals};
+use std::sync::{Arc, OnceLock};
+use egui::{Color32, FontData, FontDefinitions, FontFamily, Stroke, Visuals};
 use serde::{Deserialize, Serialize};
+
+/// Installs native Korean system UI fonts into the egui context to prevent CJK tofu/boxes.
+pub fn install_korean_fonts(ctx: &egui::Context) {
+    static INSTALLED: OnceLock<()> = OnceLock::new();
+    if INSTALLED.get().is_some() {
+        return;
+    }
+
+    let mut fonts = FontDefinitions::default();
+    let probe_chars = &['한', '글', '제', '안', '서', '문', '서', '표', '실', '측', '비', '교'];
+
+    #[cfg(not(target_arch = "wasm32"))]
+    if let Some(sys_font) = wordcraft_fonts::system_cjk_ui_font_for(false, true, probe_chars) {
+        let mut font_data = FontData::from_owned(sys_font.bytes);
+        font_data.index = sys_font.index;
+        fonts
+            .font_data
+            .insert("KoreanSystemUi".to_string(), Arc::new(font_data));
+
+        if let Some(prop) = fonts.families.get_mut(&FontFamily::Proportional) {
+            prop.push("KoreanSystemUi".to_string());
+        }
+        if let Some(mono) = fonts.families.get_mut(&FontFamily::Monospace) {
+            mono.push("KoreanSystemUi".to_string());
+        }
+    }
+
+    ctx.set_fonts(fonts);
+    let _ = INSTALLED.set(());
+}
 
 /// Active visual theme of the ONEOFFICE Studio.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -12,8 +43,10 @@ pub enum StudioTheme {
 }
 
 impl StudioTheme {
-    /// Applies theme tokens to the egui context visuals.
+    /// Applies theme tokens to the egui context visuals and ensures Korean fonts are loaded.
     pub fn apply(&self, ctx: &egui::Context) {
+        install_korean_fonts(ctx);
+
         let mut visuals = match self {
             Self::Light => Visuals::light(),
             Self::Dark => Visuals::dark(),

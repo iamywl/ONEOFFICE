@@ -19,15 +19,17 @@ Never mark an ONEOFFICE task complete based on compilation alone. Execute all ap
   - `npm --prefix hanul-hwpx run check && npm --prefix hanul-hwpx test`
   - `npm --prefix OPEN_PPTX run compile`
 
-## Tier 2: 5-Format Lossless Round-Trip & Calc/PDF Integrity
+## Tier 2: 5-Format Lossless Round-Trip & Calc/PDF/DOCX Integrity
 - **HWPX (KS X 6101)**: Verify `mimetype` uncompressed, `Contents/content.hpf` manifest completeness, `<hp:p><hp:run><hp:tbl>` hierarchy, valid `cellAddr` grid, and lossless re-open of formulas, charts, and `DiagramSpec`.
-- **XLSX / DOCX / PPTX**: Run `gridcraft-cli check <file> --json` (`< 1e-9` calc oracle tolerance) and verify embedded chart `.xlsx` preservation.
+- **XLSX / PPTX**: Run `gridcraft-cli check <file> --json` (`< 1e-9` calc oracle tolerance) and verify embedded chart `.xlsx` preservation.
+- **DOCX (WordCraft DrawingML)**: Verify real DrawingML compound objects (diagrams, 26-type charts, transparent BehindText seals) embedded in `word/media/` and `<w:drawing>`, asserting `wordcraft_docx::read` roundtrips all image objects losslessly without empty-document fallbacks.
 - **PDF Signature & Stamp (`oneoffice-pdf`)**: Apply freehand Bezier signature + white-bg-removed stamp (`removeWhiteBg: true`) -> save PDF -> reload in `craft-pdf` -> assert 100% original text extraction, intact links/outlines, and clean alpha compositing (zero black/white bounding box artifacts).
 
 ## Tier 3: Proposal Diagram Geometry (`Zero Overflow / Zero Collision`)
 - Validate Korean proposal infographics (`DiagramSpec`): `overflow_count == 0`, `collision_count == 0`, and connector port attachment within `<= 1.5 pt`.
 
 ## Tier 4: VS Code VSIX & Native Desktop Runtime Gate
+- **Zero-Tofu Korean Font Check**: Execute `test_korean_font_installation_and_glyph_coverage` asserting system Hangul fonts (`Apple SD Gothic Neo`, `Pretendard`, `Malgun Gothic`) are installed in `egui::Context` with zero missing CJK glyphs (`ㅁㅁㅁ` tofu).
 - Test `oneoffice-vscode` via `@vscode/test-electron` across `.hwpx`, `.docx`, `.xlsx`, `.pptx`, and `.pdf` custom editors.
 - Test Native Desktop (`OneOffice.app` on macOS + cross-platform Linux/Windows CI targets) via `--control` loopback RPC and `ui.screenshot`.
 

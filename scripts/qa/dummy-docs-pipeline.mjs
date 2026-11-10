@@ -50,13 +50,15 @@ const FORMATS = [
     },
   },
   {
-    name: 'DOCX 기술 보고서',
+    name: 'DOCX 기술 보고서 & DrawingML 그림자료/직인',
     filename: 'dummy_report.docx',
     magic: [0x50, 0x4b, 0x03, 0x04], // PK.. (ZIP)
-    minBytes: 1_000,
+    minBytes: 50_000,
     check: (buf) => {
       const text = buf.toString('latin1');
-      return text.includes('word/document.xml') || text.includes('[Content_Types].xml');
+      const hasDocXml = text.includes('word/document.xml');
+      const hasMedia = text.includes('word/media/');
+      return hasDocXml && hasMedia;
     },
   },
   {

@@ -16,11 +16,17 @@ use std::path::PathBuf;
 
 use oneoffice_bridge::calc::{CalcTableSpec, CellInput};
 use oneoffice_bridge::chart::{ChartSeriesInput, ChartSpecInput, UnifiedChartEngine};
-use oneoffice_hwpx_core::{HwpxPackage, HwpxTableFormulaSidecar, embed_table_into_section};
+use oneoffice_hwpx_core::{embed_table_into_section, HwpxPackage, HwpxTableFormulaSidecar};
 use oneoffice_pdf::{
-    PdfDocumentSession, PlacedSignature, SignatureLayerStack, SignaturePayload,
     generate_cleanroom_seal_on_white_paper_png, generate_sample_korean_contract_pdf,
-    remove_white_background, save_pdf_with_signatures,
+    remove_white_background, save_pdf_with_signatures, PdfDocumentSession, PlacedSignature,
+    SignatureLayerStack, SignaturePayload,
+};
+use wordcraft_doc::{
+    para::{Anchor, Float, InlineObject, Wrap},
+    para_block,
+    props::CharProps,
+    Paragraph,
 };
 
 #[test]
@@ -150,16 +156,143 @@ fn test_dummy_documents_pipeline() -> Result<(), Box<dyn std::error::Error>> {
     println!("  -> Verification: ECMA-376 workbook serialized with embedded chart & formulas.");
 
     // -------------------------------------------------------------------------
-    // 4. DOCX: Technical Report with OOXML Package
+    // 4. DOCX: Technical Report with Embedded Drawings & Infographics
     // -------------------------------------------------------------------------
     println!("\n[4/5] Generating & Verifying DOCX Report (`dummy_report.docx`)...");
-    let doc = wordcraft_doc::Document::default();
+    let mut doc = wordcraft_doc::Document::new();
+
+    // Generate high-resolution proposal diagram PNG
+    let diag_spec = oneoffice_diagram::instantiate_template("problem-comparison-to-solution")?;
+    let diag_scene = oneoffice_diagram::solve_layout(&diag_spec)?;
+    let diag_png = oneoffice_diagram::compile_png(&diag_scene, 1.5)?;
+    assert!(diag_png.len() > 1000, "Diagram PNG must be valid image data");
+
+    // Chart PNG from chart bundle
+    let chart_png = chart_bundle.png_bytes.clone();
+    assert!(chart_png.len() > 1000, "Chart PNG must be valid image data");
+
+    // Stamp PNG
+    let stamp_png = seal_white_paper_png.clone();
+
+    // Register media into WordCraft Document
+    let diag_key = doc.add_media(diag_png.clone(), "png");
+    let chart_key = doc.add_media(chart_png.clone(), "png");
+    let stamp_key = doc.add_media(stamp_png.clone(), "png");
+
+    let mut body_blocks = Vec::new();
+
+    // Title Paragraph
+    let p_title = Paragraph::with_text(
+        "ONEOFFICE 차세대 통합 오피스 기술 검증 보고서",
+        CharProps {
+            size: Some(18.0),
+            bold: Some(true),
+            ..Default::default()
+        },
+    );
+    body_blocks.push(para_block(p_title));
+
+    // Section 1: Introduction text
+    let p_intro = Paragraph::with_text(
+        "본 기술 보고서는 WordCraft DOCX 엔진 내에 컨설팅급 제안서 도식화, 26종 엑셀 차트, 및 전자직인이 네이티브 DrawingML 그래픽 객체로 완벽히 삽입되어 렌더링됨을 실측 검증합니다.",
+        CharProps::default(),
+    );
+    body_blocks.push(para_block(p_intro));
+
+    // Section 2: Proposal Diagram Inline Drawing
+    let mut p_diag = Paragraph::with_text(
+        "그림 1. 컨설팅 제안서 비교 도식화 (DiagramSpec v1):\n",
+        CharProps::default(),
+    );
+    let diag_obj = InlineObject::Image {
+        media: diag_key.clone(),
+        w: 460.0,
+        h: 230.0,
+        alt: "컨설팅 제안서 비교 도식화".into(),
+        float: Float::default(),
+        crop: [0.0; 4],
+        ole: None,
+    };
+    p_diag.insert_object(p_diag.len(), diag_obj, &CharProps::default())?;
+    body_blocks.push(para_block(p_diag));
+
+    // Section 3: Chart Inline Drawing
+    let mut p_chart = Paragraph::with_text(
+        "그림 2. 2026 사업 예산 배분 및 집행 차트 (GridCraft 26종 차트 엔진):\n",
+        CharProps::default(),
+    );
+    let chart_obj = InlineObject::Image {
+        media: chart_key.clone(),
+        w: 420.0,
+        h: 210.0,
+        alt: "2026 사업 예산 차트".into(),
+        float: Float::default(),
+        crop: [0.0; 4],
+        ole: None,
+    };
+    p_chart.insert_object(p_chart.len(), chart_obj, &CharProps::default())?;
+    body_blocks.push(para_block(p_chart));
+
+    // Section 4: Signature / Stamp (BehindText floating stamp)
+    let mut p_stamp = Paragraph::with_text(
+        "검증 날인: 주식회사 원오피스 대표이사 (인)",
+        CharProps::default(),
+    );
+    let stamp_obj = InlineObject::Image {
+        media: stamp_key.clone(),
+        w: 50.0,
+        h: 50.0,
+        alt: "원오피스 직인".into(),
+        float: Float {
+            wrap: Wrap::BehindText,
+            h_rel: Anchor::Paragraph,
+            v_rel: Anchor::Paragraph,
+            x: 280.0,
+            y: -10.0,
+            ..Default::default()
+        },
+        crop: [0.0; 4],
+        ole: None,
+    };
+    p_stamp.insert_object(p_stamp.len(), stamp_obj, &CharProps::default())?;
+    body_blocks.push(para_block(p_stamp));
+
+    doc.body = body_blocks;
+
     let docx_bytes = wordcraft_docx::write(&doc)?;
     let docx_path = out_dir.join("dummy_report.docx");
     fs::write(&docx_path, &docx_bytes)?;
-    assert!(docx_bytes.len() > 100);
+    assert!(docx_bytes.len() > 10000, "DOCX package with images must be substantial in size");
+
+    // Strict Empirical Verification: Round-trip read
+    let reloaded_doc = wordcraft_docx::read(&docx_bytes)?;
+    assert_eq!(reloaded_doc.media.len(), 3, "All 3 media images must be preserved in round-trip");
+    assert!(reloaded_doc.media.contains_key(&diag_key), "Diagram image key must exist");
+    assert!(reloaded_doc.media.contains_key(&chart_key), "Chart image key must exist");
+    assert!(reloaded_doc.media.contains_key(&stamp_key), "Stamp image key must exist");
+
+    // ZIP package inspection: verify word/media/ and word/document.xml DrawingML tags
+    let mut zip_reader = zip::ZipArchive::new(std::io::Cursor::new(&docx_bytes))?;
+    let mut image_count = 0;
+    for i in 0..zip_reader.len() {
+        let file = zip_reader.by_index(i)?;
+        let name = file.name();
+        if name.starts_with("word/media/") {
+            image_count += 1;
+        }
+    }
+    assert_eq!(image_count, 3, "ZIP archive must contain exactly 3 images in word/media/");
+
+    let mut doc_xml_file = zip_reader.by_name("word/document.xml")?;
+    let mut doc_xml = String::new();
+    std::io::Read::read_to_string(&mut doc_xml_file, &mut doc_xml)?;
+    assert!(doc_xml.contains("<w:drawing>"), "document.xml must contain <w:drawing> elements");
+    assert!(doc_xml.contains("<wp:inline"), "document.xml must contain <wp:inline> for diagrams/charts");
+    assert!(doc_xml.contains("<wp:anchor"), "document.xml must contain <wp:anchor> for BehindText stamp");
+    assert!(doc_xml.contains("http://schemas.openxmlformats.org/drawingml/2006/picture"), "DrawingML picture URI must be present");
+
     println!("  -> Saved: {} ({} bytes)", docx_path.display(), docx_bytes.len());
-    println!("  -> Verification: WordCraft OOXML report package generated successfully.");
+    println!("  -> Verification: WordCraft OOXML report verified: 3 images (Diagram, Chart, Stamp) with DrawingML <wp:inline> & <wp:anchor> roundtripped losslessly.");
 
     // -------------------------------------------------------------------------
     // 5. PPTX: Proposal Slide Deck with Connectors & SmartArt

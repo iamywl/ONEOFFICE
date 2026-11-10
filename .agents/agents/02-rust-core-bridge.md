@@ -23,8 +23,9 @@ description: Shared Rust Engine & Calc/Chart Bridge Architect for ONEOFFICE. Uni
      - **`UnifiedChartEngine`**: `gridcraft-chart`의 26종 `ChartKind` 및 6종 추세선을 사용하여 (a) 벡터 프리미티브(`Vec<Prim>`), (b) 인라인 SVG(`chart_svg`), (c) 고해상도 RGBA PNG(`rasterize`), (d) OOXML `c:chartSpace` XML + 임베디드 `.xlsx` 사이드카를 동시 생성(이로써 `OPEN_PPTX` `#335` 차트 `.xlsx` 유실 문제와 `OPEN_WORD`/`hanul-hwpx` 차트 한계를 단번에 해결).
 2. **한글 폰트 메트릭 & 텍스트 측정 서비스 노출**:
    - `wordcraft-fonts`(`harfrust` + `skrifa`)를 통해 한글 폰트(`Apple SD Gothic Neo`, `맑은 고딕`, `Pretendard`, `Noto Sans CJK KR`)의 정확한 줄바꿈 높이 및 바운딩박스를 계산하는 `TextMeasurer` 트레이트를 `oneoffice-diagram-engine`에 제공한다.
-3. **WordCraft 복합 개체 확장**:
+3. **WordCraft 복합 개체 & 그림 자료(DrawingML) 확장**:
    - `OPEN_WORD`의 `ChartSpec`(기존 8종)을 `UnifiedChartEngine` 26종으로 확장하고, `BehindText` 직인 선택 히트테스트(`GAP-SIG-01`) 시 `Alt+클릭` / 개체 선택 모드를 지원한다.
+   - **DOCX 내 DrawingML 그림 자료/도식화/차트/직인 패키징 무결성 보장**: `doc.add_media` 및 `InlineObject::Image`로 인라인 및 부유 객체(`Wrap::BehindText`)를 삽입하고, `wordcraft_docx::write` 시 `word/media/`와 `<w:drawing>` 태그가 누락 없이 생성되며 `wordcraft_docx::read` 역직렬화 라운드트립 시 무손실로 복원됨을 검증한다.
 
 ## 3. 필수 검증 게이트
 - `cargo clippy --workspace --all-targets -- -D warnings`

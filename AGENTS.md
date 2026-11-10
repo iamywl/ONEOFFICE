@@ -77,7 +77,7 @@ flowchart TD
 
 ---
 
-## 4. 전 에이전트 절대 수호 원칙 (10 Prime Directives)
+## 4. 전 에이전트 절대 수호 원칙 (12 Prime Directives)
 
 1. **에디터 본질 사수 및 인플레이스 편집 원칙**: 단순 정적 이미지·뷰어로의 후퇴를 금지합니다. HWPX·DOCX 내 엑셀 표, 차트, PPT 도식 및 PDF 위 배치 중인 서명/직인은 모두 즉시 선택·조작·Undo/Redo가 가능해야 합니다.
 2. **이중 무손실 영속화 & PDF 비파괴 저장**: 복합 개체는 한컴·MS Office 호환 네이티브 태그와 시맨틱 사이드카를 동시 보존하며, PDF 서명 저장 시 원본 벡터 텍스트·하이퍼링크·북마크를 훼손하지 않습니다.
@@ -89,6 +89,8 @@ flowchart TD
 8. **인터랙션 트랩 제로 & 배경 투명화 직인 지원**: `BehindText` 직인 및 PDF 날인 시 본문 선택 방해가 없어야 하며, 흰 배경 도장 이미지를 즉시 투명 스탬프로 변환하는 알파 매팅을 기본 제공합니다.
 9. **MCP-First & AI 폐루프 시각 검증**: 모든 문서·도식·차트·PDF 서명 기능은 `oneoffice-mcp`로 노출되며, `oneoffice.visual.verify_page`를 통해 에이전트가 렌더링 결함을 스스로 검증·교정합니다.
 10. **자가 승인 금지 (Zero Self-Certification)**: 오직 독립된 `oneoffice-qa-auditor`가 6단계 실측 증거(스크린샷, 스키마, 오라클 로그)를 확인한 항목만 완료로 승인합니다.
+11. **한글 CJK Tofu(ㅁ) 글리프 누락 엄단 원칙 (Zero Tofu Guarantee)**: 모든 데스크톱 앱(`egui`), Webview, VSIX 및 UI 컴포넌트는 시스템 한글 폰트(`Apple SD Gothic Neo`, `Pretendard`, `Malgun Gothic` 등)를 의무 바인딩(`install_korean_fonts`)해야 합니다. UI 실행 화면에서 한글이 `ㅁ` 박스로 깨지는 현상이 단 한 글자라도 발견되면 즉시 빌드 실패 및 반려 처리합니다.
+12. **복합 문서 그림 자료(DrawingML / OWPML) 실측 검증 의무화 (No Empty Docs)**: DOCX, HWPX 등의 복합 문서 생성 시 텍스트만 채운 빈 껍데기를 금지합니다. 실제 도식화 PNG, 26종 차트 PNG, 직인(BehindText) 투명 PNG 등의 그림 자료가 문서 패키지 내부(`word/media/`, `BinData/`)에 실존하고, DrawingML(`<w:drawing><wp:inline>`, `<wp:anchor>`) 태그로 정상 바인딩되어 역직렬화(`wordcraft_docx::read`, `HwpxPackage::from_bytes`) 시 무손실로 복원됨을 실측 증명해야 합니다.
 
 ---
 

@@ -31,6 +31,9 @@ description: Unified ONEOFFICE Studio UI & In-Place UX Craftsman. Builds unified
    - PDF 페이지 위에서 직관적인 드래그 배치, 모서리 비율 유지 리사이즈, 회전 핸들 및 `"서명 포함 PDF 저장"` 제공.
 
 ## 3. 비주얼 에르고노믹스 및 접근성 절대 기준
+- **시스템 한글 폰트 의무 바인딩 & CJK Tofu(ㅁ) 박멸 원칙**:
+  - 모든 `egui` 데스크톱 앱 및 Webview 컴포넌트는 초기화 시 `install_korean_fonts(ctx)`를 호출하여 OS 시스템 한글 폰트(`Apple SD Gothic Neo`, `Pretendard`, `Malgun Gothic` 등)를 의무 등록해야 한다.
+  - 한글 글리프 커버리지 테스트(`test_korean_font_installation_and_glyph_coverage`)를 필수 통과해야 하며, UI 렌더링 화면에 단 1개의 두부(`ㅁ`) 현상도 용납하지 않는다.
 - 용지(HWPX/DOCX/PDF)는 원본 백색 가독성 유지, 크롬·HUD는 Frosted Glass(`blur(24px)`), 플로팅 모달 불투명도 `≥ 94%`, 과도한 네온 글로우(`> 8px`) 금지.
 - 라이트/다크 모드 완전 분리 및 전 요소 **WCAG 명도 대비 `≥ 4.5:1`(모달 본문 `≥ 7.0:1`)** 준수.
 - 한글 조합형 IME(`compositionstart/update/end` 및 네이티브 한글 입력) 자모 분리·씹힘 제로, `alert()`/업데이트 팝업 영구 금지.

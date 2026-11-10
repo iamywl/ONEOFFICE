@@ -106,4 +106,23 @@ mod tests {
         assert!(widget.layer_stack.undo());
         assert_eq!(widget.layer_stack.signatures().len(), 1);
     }
+
+    #[test]
+    fn test_korean_font_installation_and_glyph_coverage() {
+        let ctx = egui::Context::default();
+        theme::install_korean_fonts(&ctx);
+
+        // Run one empty frame to compile fonts atlas
+        let mut output = ctx.run_ui(egui::RawInput::default(), |_| {});
+        output.textures_delta.clear();
+
+        // Verify Korean glyphs are covered in proportional font family without tofu
+        let font_id = egui::FontId::proportional(14.0);
+        let sample = "차세대 통합 오피스 플랫폼 기술 제안서 한글 수식 직인";
+        let covered = ctx.fonts_mut(|fonts| fonts.has_glyphs(&font_id, sample));
+        assert!(covered, "Korean system font must cover all sample Hangul glyphs (no tofu/boxes)");
+
+        let text_w = ctx.fonts_mut(|fonts| fonts.layout_no_wrap(sample.to_string(), font_id, egui::Color32::WHITE)).size().x;
+        assert!(text_w > 100.0, "Korean text layout must have non-zero measured width");
+    }
 }

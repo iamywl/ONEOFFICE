@@ -21,10 +21,12 @@ description: Independent Zero-Trust Adversarial QA & Cross-Platform Visual Audit
 2. **Tier 2 — 5대 포맷 무손실 라운드트립 & 오라클 게이트**:
    - **HWPX**: KS X 6101 스키마(`content.hpf` 매니페스트, `<hp:p><hp:run><hp:tbl>`, `cellAddr` 정합성) 및 수식·차트·`DiagramSpec` 재열기 100% 보존.
    - **XLSX / DOCX / PPTX**: `gridcraft-cli check` 수식 오라클 오차 `< 1e-9` 및 임베디드 차트 `.xlsx` 보존 검증.
+   - **DOCX 복합 개체 및 그림 자료(DrawingML) 실측 검증 (No Empty/Fake Docs)**: DOCX 생성 시 텍스트만 든 빈 문서를 엄단하며, 실제 도식화 PNG, 26종 차트 PNG, 직인(BehindText) 투명 PNG 등의 그림 자료가 문서 패키지 내부(`word/media/`)에 실존하고, DrawingML(`<w:drawing><wp:inline>`, `<wp:anchor>`) 태그로 정상 바인딩되어 역직렬화(`wordcraft_docx::read`) 시 이미지 객체 3종이 무손실로 복원됨을 ZIP 엔트리 및 바이트 단위로 실측 검증.
    - **PDF 서명 무결성**: PDF에 자필 서명 + 흰 배경 투명화 도장을 날인·저장한 후 재로드 시 (a) 기존 페이지 본문 텍스트 검색·추출이 100% 일치하고, (b) 하이퍼링크/북마크가 보존되며, (c) 투명 알파 배경이 검은색/흰색 박스로 깨지지 않음을 픽셀 실측으로 증명.
 3. **Tier 3 — 제안서 도식화 기하학 불변식 게이트 (`Zero Overflow / Zero Collision`)**:
    - `WON주민`급 제안서 원페이저 도식 골든 픽스처에서 한글 글자 잘림(`overflow_count == 0`), 카드 충돌(`collision_count == 0`), 화살표 포트 결착 오차(`≤ 1.5 pt`) 수치 검증.
 4. **Tier 4 — VS Code Extension Host & 네이티브 데스크톱 듀얼 런타임 게이트**:
+   - **한글 CJK Tofu(ㅁ) 글리프 누락 엄단 원칙 (Zero Tofu Guarantee)**: 데스크톱 앱(`oneoffice-desktop`) 및 Webview 화면을 구동했을 때 타이틀, 메뉴, 카드, 본문, 수식표 등 모든 UI 텍스트에서 한글 글리프 누락(`ㅁㅁㅁ`)이 단 1건도 없음을 검증하는 자동 단위 테스트(`test_korean_font_installation_and_glyph_coverage`) 및 캡처 전수 감사 통과 의무화.
    - `@vscode/test-electron`으로 `oneoffice-vscode` VSIX를 실제 로드하여 `.hwpx`, `.docx`, `.xlsx`, `.pptx`, **`.pdf`** 5종 파일이 각각 커스텀 에디터로 열리고 편집·서명 저장되는지 E2E 검증.
    - 네이티브 데스크톱 앱(`OneOffice.app` 및 크로스플랫폼 CI 매트릭스) 구동 및 `--control` TCP 스크린샷 캡처 검증.
 5. **Tier 5 — 라이트/다크 양방향 명도 대비 & 인터랙션 트랩 게이트**:

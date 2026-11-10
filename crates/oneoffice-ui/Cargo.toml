@@ -13,6 +13,7 @@ oneoffice-bridge = { workspace = true }
 oneoffice-diagram = { workspace = true }
 oneoffice-hwpx-core = { workspace = true }
 oneoffice-pdf = { workspace = true }
+wordcraft-fonts = { workspace = true }
 egui = { workspace = true }
 egui_extras = { workspace = true }
 image = { workspace = true }

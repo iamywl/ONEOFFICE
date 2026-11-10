@@ -27,6 +27,8 @@
 | **F-12** | 3-OS Native | `macOS`(`.app`), `Windows`(`.exe`/MSI), `Linux`(`AppImage`/`.deb`) 네이티브 | `✅ Verified` | Wave 3: Track G | `apps/oneoffice-desktop` eframe 실행기 + 드래그앤드롭 + 3대 OS CI 매트릭스 완료 |
 | **F-13** | Dummy Pipeline | 5대 포맷(`PDF`/`HWPX`/`XLSX`/`DOCX`/`PPTX`) 더미 문서 생성 및 2차 규격 검증 | `✅ Verified` | Wave 1-3 All | `scripts/qa/dummy-docs-pipeline.mjs` (5종 전수 바이트/구조 검증 통과) |
 | **F-14** | Doc Integrity | 리드미 및 문서 자산 무결성 자동 검증기 (404 방지, 서브모듈/더미 전수 감사) | `✅ Verified` | Wave 1-3 All | `scripts/qa/verify-readme.mjs` (README + 4개 서브모듈 + 더미문서 100% 통과) |
+| **F-15** | UI Zero-Tofu | 데스크톱 앱 및 UI 시스템 한글 폰트 바인딩 및 CJK 두부(ㅁ) 결함 박멸 | `✅ Verified` | Wave 3: Track G | `test_korean_font_installation_and_glyph_coverage` & `install_korean_fonts` 실측 |
+| **F-16** | DOCX DrawingML | WordCraft DOCX 내 3종 그림자료(도식화/차트/직인) DrawingML 임베딩 및 무손실 복원 | `✅ Verified` | Wave 1: Track A | `wordcraft_docx::write/read` 라운드트립 + ZIP `word/media/` 실측 (344.5 KB) |
 
 ---
 

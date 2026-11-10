@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const outDir = path.resolve('dist');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const outDir = path.join(__dirname, 'dist');
 fs.mkdirSync(outDir, { recursive: true });
 
 const extensionJs = `"use strict";
