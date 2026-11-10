@@ -11,6 +11,10 @@ target/
 # Node / TypeScript Dependencies & Temp Previews
 node_modules/
 **/node_modules/
+**/node_modules
+extensions/oneoffice-vscode/media
+extensions/oneoffice-vscode/vendor
+extensions/oneoffice-vscode/dist/extension.js.map
 .preview/
 **/.preview/
 out/

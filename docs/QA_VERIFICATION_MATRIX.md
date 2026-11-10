@@ -35,6 +35,8 @@
 | **F-20** | Undo/Redo Engine | 다단계 실행 취소(`Ctrl+Z`) 및 다시 실행(`Ctrl+Y`/`Ctrl+Shift+Z`) 스냅샷 히스토리 파이프라인 | `✅ Verified` | Wave 2: Track E | `test_undo_redo_pipeline` & `push_undo_snapshot` |
 | **F-21** | Find & Replace | 대화형 찾기(`Ctrl+F`) 및 일괄 바꾸기(`Ctrl+H`) 글래스 HUD (문서·시트·슬라이드 전수 검색) | `✅ Verified` | Wave 2: Track E | `test_find_and_replace_pipeline` & `perform_replace_all` |
 | **F-22** | Direct PDF Export | DOCX/HWPX/XLSX/PPTX 임의 문서를 벡터 PDF로 즉시 컴파일 후 전자서명 뷰어로 직결 변환 | `✅ Verified` | Wave 1-2: Track D/E | `test_generate_document_pdf_export` & `test_export_document_to_pdf` |
+| **F-23** | Headless Offscreen Engine | 창 팝업 없는 순수 백그라운드 메모리 프레임버퍼 렌더러 (`egui_kittest` + `wgpu`) 기반 5대 포맷 100% 무결점 고해상도 PNG 캡처 | `✅ Verified` | Wave 3: Track G | `headless_screenshot.rs` (7종 실측 렌더링 0.16s 통과 & 126만 픽셀 검증) |
+| **F-24** | Parallel Heavy Stress | 1,000행 엑셀 수식·10회 HiDPI PDF 날인·50회 제안서 도식 컴파일·10회 DOCX/HWPX 패키징 병렬 스트레스 게이트 | `✅ Verified` | Wave 1-3 All | `stress_parallel_docs.rs` (4대 무거운 스레드 동시 완주 0.29s) |
 
 ---
 

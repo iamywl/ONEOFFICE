@@ -32,9 +32,9 @@
 
 ---
 
-## 3. 정예 9대 서브에이전트 조직 및 병렬 파이프라인
+## 3. 정예 10대 서브에이전트 조직 및 병렬 파이프라인
 
-병렬 개발 속도를 극대화하고 파일 충돌 및 자가 승인(Self-Certification)을 원천 차단하기 위해 **쓰기 경로(Write Scope)가 완전히 격리된 9대 전문 서브에이전트 체제**로 운영합니다.
+병렬 개발 속도를 극대화하고 파일 충돌 및 자가 승인(Self-Certification)을 원천 차단하기 위해 **쓰기 경로(Write Scope)가 완전히 격리된 10대 전문 서브에이전트 체제**로 운영합니다.
 
 ```mermaid
 flowchart TD
@@ -59,7 +59,8 @@ flowchart TD
     M --> PKG
 
     PKG --> Q["09. 적대적 실측 QA & 비주얼 감사관\n09-adversarial-qa-auditor.md"]
-    Q -->|"6단계 실측 게이트 100% 통과"| Orch
+    Q -->|"6단계 실측 게이트 100% 통과"| DOC["10. 문서 디자인 & 비주얼 쇼케이스\n10-doc-design-showcase-architect.md"]
+    DOC -->|"하네스 통과 & 최종 쇼케이스 완성"| Orch
     Q -->|"결함 발견 시 재현 좌표와 함께 반려"| Orch
 ```
 
@@ -74,6 +75,7 @@ flowchart TD
 | **07** | `oneoffice-mcp-architect` | `.agents/agents/07-mcp-agent-architect.md` | `crates/oneoffice-mcp/**`, `hanul-hwpx/src/mcp/**` | 통합 `oneoffice-mcp` 서버(도식·표·차트·**PDF 열람/날인**·`visual.verify_page` 자가 검증) |
 | **08** | `oneoffice-release-governor` | `.agents/agents/08-crossplatform-packaging-governor.md` | `extensions/oneoffice-vscode/**`, `apps/oneoffice-desktop/**`, `packaging/**` | 올인원 VS Code VSIX 패키징 및 **macOS · Windows · Linux** 네이티브 번들/설치기/CI 구축 |
 | **09** | `oneoffice-qa-auditor` | `.agents/agents/09-adversarial-qa-auditor.md` | `tests/**`, `scripts/qa/**`, `docs/QA_VERIFICATION_MATRIX.md` | 무신뢰(Zero-Trust) 6단계 실측 검증(스키마, 수식 오라클, 도식 BBox, PDF 서명 무결성, VSIX/네이티브 캡처) |
+| **10** | `oneoffice-doc-designer` | `.agents/agents/10-doc-design-showcase-architect.md` | `README.md`, `README.en.md`, `docs/SHOWCASE_GALLERY.md`, `docs/assets/**`, `scripts/qa/doc_harness.mjs` | `im-not-ai` 벤치마크 기반 쇼케이스 문서화, 캡처 기반 기능/장점 실측 명세, 문서 검증 하네스 운용 |
 
 ---
 
@@ -91,6 +93,7 @@ flowchart TD
 10. **자가 승인 금지 (Zero Self-Certification)**: 오직 독립된 `oneoffice-qa-auditor`가 6단계 실측 증거(스크린샷, 스키마, 오라클 로그)를 확인한 항목만 완료로 승인합니다.
 11. **한글 CJK Tofu(ㅁ) 글리프 누락 엄단 원칙 (Zero Tofu Guarantee)**: 모든 데스크톱 앱(`egui`), Webview, VSIX 및 UI 컴포넌트는 시스템 한글 폰트(`Apple SD Gothic Neo`, `Pretendard`, `Malgun Gothic` 등)를 의무 바인딩(`install_korean_fonts`)해야 합니다. UI 실행 화면에서 한글이 `ㅁ` 박스로 깨지는 현상이 단 한 글자라도 발견되면 즉시 빌드 실패 및 반려 처리합니다.
 12. **복합 문서 그림 자료(DrawingML / OWPML) 실측 검증 의무화 (No Empty Docs)**: DOCX, HWPX 등의 복합 문서 생성 시 텍스트만 채운 빈 껍데기를 금지합니다. 실제 도식화 PNG, 26종 차트 PNG, 직인(BehindText) 투명 PNG 등의 그림 자료가 문서 패키지 내부(`word/media/`, `BinData/`)에 실존하고, DrawingML(`<w:drawing><wp:inline>`, `<wp:anchor>`) 태그로 정상 바인딩되어 역직렬화(`wordcraft_docx::read`, `HwpxPackage::from_bytes`) 시 무손실로 복원됨을 실측 증명해야 합니다.
+13. **가짜 목업 및 껍데기 HTML 배포 절대 엄단 원칙 (No Hollow HTML / Real Renderer Binding)**: VS Code Custom Editor나 데스크톱 앱에서 단 몇 줄의 정적 안내 문구나 하드코딩된 더미 HTML(`<div>ONEOFFICE 통합 스튜디오</div>`)을 반환하는 껍데기 구현을 일절 금지합니다. 실제 서브모듈(`hanul-hwpx`, `OPEN_PPTX` 등)의 검증된 렌더러와 번들 에셋(`vendor/studio`, `media/`, 캔버스 조판 스크립트)을 직접 마운트하여, 문서를 열었을 때 실제 텍스트, 표, 도형, 서식이 온전히 렌더링되고 실시간 상호작용이 가능해야 합니다.
 
 ---
 

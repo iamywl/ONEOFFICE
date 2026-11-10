@@ -125,7 +125,7 @@ impl PdfViewerWidget {
         ui.horizontal(|ui| {
             if let Some(session) = &self.session {
                 let total = session.page_count();
-                if ui.button("◀ 이전").clicked() && self.current_page > 0 {
+                if ui.button("< 이전").clicked() && self.current_page > 0 {
                     self.current_page -= 1;
                     self.selected_sig_id = None;
                     self.refresh_page_texture(ctx);
@@ -133,7 +133,7 @@ impl PdfViewerWidget {
 
                 ui.label(format!("페이지 {} / {}", self.current_page + 1, total));
 
-                if ui.button("다음 ▶").clicked() && self.current_page + 1 < total {
+                if ui.button("다음 >").clicked() && self.current_page + 1 < total {
                     self.current_page += 1;
                     self.selected_sig_id = None;
                     self.refresh_page_texture(ctx);
@@ -143,12 +143,12 @@ impl PdfViewerWidget {
             ui.separator();
 
             // Zoom controls
-            if ui.button("➖ 축소").clicked() && self.zoom_scale > 0.5 {
+            if ui.button("- 축소").clicked() && self.zoom_scale > 0.5 {
                 self.zoom_scale -= 0.25;
                 self.refresh_page_texture(ctx);
             }
             ui.label(format!("{:.0}%", self.zoom_scale * 100.0));
-            if ui.button("➕ 확대").clicked() && self.zoom_scale < 2.5 {
+            if ui.button("+ 확대").clicked() && self.zoom_scale < 2.5 {
                 self.zoom_scale += 0.25;
                 self.refresh_page_texture(ctx);
             }

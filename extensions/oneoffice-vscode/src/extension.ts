@@ -1,60 +1,102 @@
 import * as vscode from 'vscode';
+import { OneOfficeHwpxProvider } from './hwpxProvider';
+import { OneOfficeDocxProvider } from './docxProvider';
+import { OneOfficeXlsxProvider } from './xlsxProvider';
+import { OneOfficePptxProvider } from './pptxProvider';
+import { OneOfficePdfProvider } from './pdfProvider';
 
 /**
  * Activates the unified ONEOFFICE all-in-one extension.
  */
 export function activate(context: vscode.ExtensionContext) {
-  // 1. Register Custom Editors
+  const log = vscode.window.createOutputChannel('ONEOFFICE Studio');
+  context.subscriptions.push(log);
+  log.appendLine('ONEOFFICE Studio is initializing...');
+
+  // 1. HWPX/HWP Editor Provider (Full-featured WYSIWYG Korean Document Editor)
+  const hwpxProvider = new OneOfficeHwpxProvider(context, log);
   context.subscriptions.push(
-    vscode.window.registerCustomEditorProvider(
-      'oneoffice.hwpxEditor',
-      new OneOfficeEditorProvider('hwpx'),
-      { webviewOptions: { retainContextWhenHidden: true }, supportsMultipleEditorsPerDocument: false }
-    )
+    vscode.window.registerCustomEditorProvider('oneoffice.hwpxEditor', hwpxProvider, {
+      supportsMultipleEditorsPerDocument: false,
+      webviewOptions: { retainContextWhenHidden: true }
+    })
   );
 
+  // 2. DOCX Editor Provider
+  const docxProvider = new OneOfficeDocxProvider(context);
   context.subscriptions.push(
-    vscode.window.registerCustomEditorProvider(
-      'oneoffice.docxEditor',
-      new OneOfficeEditorProvider('docx'),
-      { webviewOptions: { retainContextWhenHidden: true }, supportsMultipleEditorsPerDocument: false }
-    )
+    vscode.window.registerCustomEditorProvider('oneoffice.docxEditor', docxProvider, {
+      supportsMultipleEditorsPerDocument: false,
+      webviewOptions: { retainContextWhenHidden: true }
+    })
   );
 
+  // 3. XLSX Spreadsheet Provider
+  const xlsxProvider = new OneOfficeXlsxProvider(context);
   context.subscriptions.push(
-    vscode.window.registerCustomEditorProvider(
-      'oneoffice.xlsxEditor',
-      new OneOfficeEditorProvider('xlsx'),
-      { webviewOptions: { retainContextWhenHidden: true }, supportsMultipleEditorsPerDocument: false }
-    )
+    vscode.window.registerCustomEditorProvider('oneoffice.xlsxEditor', xlsxProvider, {
+      supportsMultipleEditorsPerDocument: false,
+      webviewOptions: { retainContextWhenHidden: true }
+    })
   );
 
+  // 4. PPTX Presentation Provider
+  const pptxProvider = new OneOfficePptxProvider(context);
   context.subscriptions.push(
-    vscode.window.registerCustomEditorProvider(
-      'oneoffice.pptxEditor',
-      new OneOfficeEditorProvider('pptx'),
-      { webviewOptions: { retainContextWhenHidden: true }, supportsMultipleEditorsPerDocument: false }
-    )
+    vscode.window.registerCustomEditorProvider('oneoffice.pptxEditor', pptxProvider, {
+      supportsMultipleEditorsPerDocument: false,
+      webviewOptions: { retainContextWhenHidden: true }
+    })
   );
 
+  // 5. PDF Viewer & Electronic Signature Provider
+  const pdfProvider = new OneOfficePdfProvider(context);
   context.subscriptions.push(
-    vscode.window.registerCustomEditorProvider(
-      'oneoffice.pdfEditor',
-      new OneOfficeEditorProvider('pdf'),
-      { webviewOptions: { retainContextWhenHidden: true }, supportsMultipleEditorsPerDocument: false }
-    )
+    vscode.window.registerCustomEditorProvider('oneoffice.pdfEditor', pdfProvider, {
+      supportsMultipleEditorsPerDocument: false,
+      webviewOptions: { retainContextWhenHidden: true }
+    })
   );
 
-  // 2. Register Commands
+  // 6. Registered Global Commands
+  let hwpxSequence = 0;
+  const openEditor = async (uri: vscode.Uri, viewType: string) => {
+    await vscode.commands.executeCommand('vscode.openWith', uri, viewType);
+  };
+
   context.subscriptions.push(
     vscode.commands.registerCommand('oneoffice.newHwpx', async () => {
-      vscode.window.showInformationMessage('ONEOFFICE: 새 HWPX 제안서 문서를 생성합니다.');
+      await openEditor(vscode.Uri.parse(`untitled:새 문서-${++hwpxSequence}.hwpx`), 'oneoffice.hwpxEditor');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('oneoffice.newDocx', async () => {
+      await openEditor(vscode.Uri.parse(`untitled:새 문서-${++hwpxSequence}.docx`), 'oneoffice.docxEditor');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('oneoffice.newXlsx', async () => {
+      await openEditor(vscode.Uri.parse(`untitled:새 통합문서-${++hwpxSequence}.xlsx`), 'oneoffice.xlsxEditor');
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('oneoffice.newPptx', async () => {
+      await openEditor(vscode.Uri.parse(`untitled:새 프레젠테이션-${++hwpxSequence}.pptx`), 'oneoffice.pptxEditor');
     })
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand('oneoffice.signPdf', async () => {
-      vscode.window.showInformationMessage('ONEOFFICE: PDF 서명 및 투명 직인 날인 패드를 활성화합니다.');
+      const files = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        filters: { 'PDF 문서': ['pdf'] }
+      });
+      if (files?.[0]) {
+        await openEditor(files[0], 'oneoffice.pdfEditor');
+      }
     })
   );
 
@@ -66,102 +108,11 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('oneoffice.startMcpServer', async () => {
-      vscode.window.showInformationMessage('ONEOFFICE: 통합 AI MCP 서버(JSON-RPC 2.0 stdio)가 준비되었습니다.');
+      vscode.window.showInformationMessage('ONEOFFICE: AI MCP 서버 (stdio)가 대기 중입니다.');
     })
   );
+
+  log.appendLine('ONEOFFICE Studio initialized successfully with 5-format full engine.');
 }
 
 export function deactivate() {}
-
-/**
- * Universal editor provider that delegates to the specialized ONEOFFICE webview host.
- */
-class OneOfficeEditorProvider implements vscode.CustomReadonlyEditorProvider {
-  constructor(private readonly format: 'hwpx' | 'docx' | 'xlsx' | 'pptx' | 'pdf') {}
-
-  async openCustomDocument(uri: vscode.Uri): Promise<vscode.CustomDocument> {
-    return { uri, dispose: () => {} };
-  }
-
-  async resolveCustomEditor(
-    document: vscode.CustomDocument,
-    webviewPanel: vscode.WebviewPanel
-  ): Promise<void> {
-    webviewPanel.webview.options = { enableScripts: true };
-    webviewPanel.webview.html = this.renderWebviewHtml(document.uri.fsPath);
-  }
-
-  private renderWebviewHtml(filePath: string): string {
-    const fileName = filePath.split('/').pop() || filePath;
-    return `<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>ONEOFFICE Studio</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      background: var(--vscode-editor-background, #1e1e1e);
-      color: var(--vscode-editor-foreground, #cccccc);
-      font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-    }
-    .hud-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 18px;
-      background: rgba(30, 41, 59, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      font-size: 13px;
-    }
-    .badge {
-      background: #2563eb;
-      color: white;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 11px;
-    }
-    .canvas-container {
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #0f172a;
-      overflow: auto;
-      padding: 24px;
-    }
-    .paper {
-      background: white;
-      color: black;
-      width: 595px;
-      min-height: 842px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
-      border-radius: 2px;
-      padding: 48px;
-      box-sizing: border-box;
-    }
-  </style>
-</head>
-<body>
-  <div class="hud-bar">
-    <span class="badge">ONEOFFICE · ${this.format.toUpperCase()}</span>
-    <span>문서: <strong>${fileName}</strong></span>
-  </div>
-  <div class="canvas-container">
-    <div class="paper">
-      <h2>ONEOFFICE ${this.format.toUpperCase()} 통합 스튜디오</h2>
-      <p>순수 Rust 엔진 기반 무손실 문서 편집 및 인플레이스 복합 개체 뷰어입니다.</p>
-    </div>
-  </div>
-</body>
-</html>`;
-  }
-}

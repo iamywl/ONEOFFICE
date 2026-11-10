@@ -4,20 +4,28 @@ use std::sync::{Arc, OnceLock};
 use egui::{Color32, FontData, FontDefinitions, FontFamily, Stroke, Visuals};
 use serde::{Deserialize, Serialize};
 
+/// Cached system Korean UI font bytes and index.
+static SYSTEM_FONT: OnceLock<Option<(Vec<u8>, u32)>> = OnceLock::new();
+
 /// Installs native Korean system UI fonts into the egui context to prevent CJK tofu/boxes.
 pub fn install_korean_fonts(ctx: &egui::Context) {
-    static INSTALLED: OnceLock<()> = OnceLock::new();
-    if INSTALLED.get().is_some() {
-        return;
-    }
+    let cached = SYSTEM_FONT.get_or_init(|| {
+        let probe_chars = &['한', '글', '제', '안', '서', '문', '서', '표', '실', '측', '비', '교'];
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            wordcraft_fonts::system_cjk_ui_font_for(false, true, probe_chars)
+                .map(|sys| (sys.bytes, sys.index))
+        }
+        #[cfg(target_arch = "wasm32")]
+        {
+            None
+        }
+    });
 
     let mut fonts = FontDefinitions::default();
-    let probe_chars = &['한', '글', '제', '안', '서', '문', '서', '표', '실', '측', '비', '교'];
-
-    #[cfg(not(target_arch = "wasm32"))]
-    if let Some(sys_font) = wordcraft_fonts::system_cjk_ui_font_for(false, true, probe_chars) {
-        let mut font_data = FontData::from_owned(sys_font.bytes);
-        font_data.index = sys_font.index;
+    if let Some((bytes, index)) = cached {
+        let mut font_data = FontData::from_owned(bytes.clone());
+        font_data.index = *index;
         fonts
             .font_data
             .insert("KoreanSystemUi".to_string(), Arc::new(font_data));
@@ -31,7 +39,6 @@ pub fn install_korean_fonts(ctx: &egui::Context) {
     }
 
     ctx.set_fonts(fonts);
-    let _ = INSTALLED.set(());
 }
 
 /// Active visual theme of the ONEOFFICE Studio.

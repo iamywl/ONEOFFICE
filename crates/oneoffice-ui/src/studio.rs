@@ -693,6 +693,7 @@ impl StudioApp {
 
     /// Renders the entire Frosted Glass studio interface into the target `Ui`.
     pub fn show(&mut self, ui: &mut Ui) {
+        self.theme.apply(ui.ctx());
         let ctrl_or_cmd = ui.input(|i| i.modifiers.command || i.modifiers.ctrl);
         let shift = ui.input(|i| i.modifiers.shift);
 
@@ -1222,8 +1223,8 @@ impl StudioApp {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 // Theme toggle
                 let theme_label = match self.theme {
-                    StudioTheme::Light => "🌙 다크 모드",
-                    StudioTheme::Dark => "☀ 라이트 모드",
+                    StudioTheme::Light => "다크 테마 (Dark)",
+                    StudioTheme::Dark => "라이트 테마 (Light)",
                 };
                 if ui.button(theme_label).clicked() {
                     self.theme = match self.theme {
@@ -1245,12 +1246,12 @@ impl StudioApp {
     fn show_ribbon_toolbar(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             // 1. File quick actions
-            if ui.button("📂 열기 (Ctrl+O)").clicked() {
+            if ui.button("열기 (Ctrl+O)").clicked() {
                 self.request_open_file = true;
             }
 
             let save_btn = ui.button(
-                RichText::new(if self.is_dirty { "💾 저장* (Ctrl+S)" } else { "💾 저장 (Ctrl+S)" })
+                RichText::new(if self.is_dirty { "저장* (Ctrl+S)" } else { "저장 (Ctrl+S)" })
                     .strong()
                     .color(if self.is_dirty { Color32::from_rgb(245, 158, 11) } else { StudioTheme::brand_accent() }),
             );
@@ -1258,11 +1259,11 @@ impl StudioApp {
                 let _ = self.save_current_document();
             }
 
-            if ui.button("💾 다른 이름으로...").clicked() {
+            if ui.button("다른 이름으로...").clicked() {
                 self.request_save_as = true;
             }
 
-            if ui.button("📤 PDF 내보내기").clicked() {
+            if ui.button("PDF 내보내기").clicked() {
                 let ctx = ui.ctx().clone();
                 let _ = self.export_current_document_to_pdf(&ctx);
             }
@@ -1270,18 +1271,18 @@ impl StudioApp {
             ui.separator();
 
             // 2. Undo / Redo Group
-            let undo_btn = ui.add_enabled(!self.undo_stack.is_empty(), egui::Button::new("↩"));
+            let undo_btn = ui.add_enabled(!self.undo_stack.is_empty(), egui::Button::new("<"));
             if undo_btn.on_hover_text("실행 취소 (Ctrl+Z)").clicked() {
                 self.undo();
             }
 
-            let redo_btn = ui.add_enabled(!self.redo_stack.is_empty(), egui::Button::new("↪"));
+            let redo_btn = ui.add_enabled(!self.redo_stack.is_empty(), egui::Button::new(">"));
             if redo_btn.on_hover_text("다시 실행 (Ctrl+Y)").clicked() {
                 self.redo();
             }
 
             // Find & Replace toggle
-            let find_btn = ui.selectable_label(self.find_replace.is_open, "🔍 찾기");
+            let find_btn = ui.selectable_label(self.find_replace.is_open, "찾기 (Ctrl+F)");
             if find_btn.on_hover_text("찾기 및 바꾸기 (Ctrl+F / Ctrl+H)").clicked() {
                 self.find_replace.is_open = !self.find_replace.is_open;
             }
@@ -1340,7 +1341,7 @@ impl StudioApp {
                     .strong()
                     .size(12.0),
             );
-            if ui.small_button("➕").clicked() && self.format_state.font_size < 36.0 {
+            if ui.small_button("+").clicked() && self.format_state.font_size < 36.0 {
                 self.push_undo_snapshot();
                 self.format_state.font_size += 1.0;
                 self.apply_format_to_active_paragraph();
@@ -1369,13 +1370,13 @@ impl StudioApp {
             }
 
             // Alignment buttons
-            if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "◀").on_hover_text("왼쪽 정렬").clicked() {
+            if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "<").on_hover_text("왼쪽 정렬").clicked() {
                 self.format_state.align = egui::Align::LEFT;
             }
-            if ui.selectable_label(self.format_state.align == egui::Align::Center, "■").on_hover_text("가운데 정렬").clicked() {
+            if ui.selectable_label(self.format_state.align == egui::Align::Center, "C").on_hover_text("가운데 정렬").clicked() {
                 self.format_state.align = egui::Align::Center;
             }
-            if ui.selectable_label(self.format_state.align == egui::Align::RIGHT, "▶").on_hover_text("오른쪽 정렬").clicked() {
+            if ui.selectable_label(self.format_state.align == egui::Align::RIGHT, ">").on_hover_text("오른쪽 정렬").clicked() {
                 self.format_state.align = egui::Align::RIGHT;
             }
 
@@ -1384,7 +1385,7 @@ impl StudioApp {
             // 4. Insert / Actions
             match self.active_doc {
                 ActiveDocumentKind::Docx | ActiveDocumentKind::Hwpx => {
-                    if ui.button("➕ 새 문단").clicked() {
+                    if ui.button("+ 새 문단").clicked() {
                         self.push_undo_snapshot();
                         if let Some(doc) = &mut self.doc_model {
                             doc.paragraphs.push(DocParagraph {
@@ -1397,18 +1398,18 @@ impl StudioApp {
                             self.is_dirty = true;
                         }
                     }
-                    if ui.button("📊 제안서 도식 연동").clicked() {
+                    if ui.button("도식 연동").clicked() {
                         self.status_text = "제안서 도식화 캔버스 연결 완료".to_string();
                     }
                 }
                 ActiveDocumentKind::Xlsx => {
-                    if ui.button("➕ 행 추가").clicked() {
+                    if ui.button("+ 행 추가").clicked() {
                         self.push_undo_snapshot();
                         let col_count = self.table_data.first().map_or(4, |r| r.len());
                         self.table_data.push(vec![String::new(); col_count]);
                         self.is_dirty = true;
                     }
-                    if ui.button("➕ 열 추가").clicked() {
+                    if ui.button("+ 열 추가").clicked() {
                         self.push_undo_snapshot();
                         for row in &mut self.table_data {
                             row.push(String::new());
@@ -1417,7 +1418,7 @@ impl StudioApp {
                     }
                 }
                 ActiveDocumentKind::Pptx => {
-                    if ui.button("➕ 새 슬라이드").clicked() {
+                    if ui.button("+ 새 슬라이드").clicked() {
                         self.push_undo_snapshot();
                         if let Some(pres) = &mut self.presentation_model {
                             let n = pres.slides.len() + 1;
@@ -1433,7 +1434,7 @@ impl StudioApp {
                     }
                 }
                 ActiveDocumentKind::Pdf => {
-                    if ui.button("✒ 전자직인 날인").clicked() {
+                    if ui.button("전자직인 날인").clicked() {
                         let _ = self.pdf_widget.stamp_seal_at(200.0, 700.0);
                         self.is_dirty = true;
                     }
@@ -1444,13 +1445,13 @@ impl StudioApp {
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 if self.is_dirty {
                     ui.label(
-                        RichText::new("● 수정됨 (저장 필요)")
+                        RichText::new("* 수정됨 (저장 필요)")
                             .color(Color32::from_rgb(245, 158, 11))
                             .size(11.0),
                     );
                 } else {
                     ui.label(
-                        RichText::new("✓ 동기화됨")
+                        RichText::new("동기화됨")
                             .color(Color32::from_rgb(16, 185, 129))
                             .size(11.0),
                     );
@@ -1466,7 +1467,7 @@ impl StudioApp {
         }
 
         ui.horizontal(|ui| {
-            ui.label(RichText::new("🔍 찾기:").strong().size(12.0));
+            ui.label(RichText::new("찾기:").strong().size(12.0));
             let find_edit = egui::TextEdit::singleline(&mut self.find_replace.find_query)
                 .desired_width(120.0)
                 .hint_text("검색어 입력...");
@@ -1504,7 +1505,7 @@ impl StudioApp {
             }
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.small_button("✖").clicked() {
+                if ui.small_button("X").clicked() {
                     self.find_replace.is_open = false;
                 }
             });
@@ -1579,7 +1580,8 @@ impl StudioApp {
                         ui.horizontal(|ui| {
                             let title_edit = egui::TextEdit::singleline(&mut doc.title)
                                 .font(egui::FontId::proportional(22.0))
-                                .text_color(Color32::from_rgb(15, 23, 42));
+                                .text_color(Color32::from_rgb(15, 23, 42))
+                                .frame(egui::Frame::NONE);
                             if ui.add(title_edit).changed() {
                                 self.is_dirty = true;
                             }
@@ -1601,12 +1603,14 @@ impl StudioApp {
                                     let edit = egui::TextEdit::multiline(&mut para.text)
                                         .desired_rows(1)
                                         .desired_width(f32::INFINITY)
+                                        .text_color(Color32::from_rgb(30, 41, 59))
+                                        .frame(egui::Frame::NONE)
                                         .font(egui::FontId::proportional(para.font_size));
                                     let resp = ui.add(edit);
                                     if resp.changed() {
                                         self.is_dirty = true;
                                     }
-                                    if ui.small_button("🗑").on_hover_text("문단 삭제").clicked() {
+                                    if ui.small_button("X").on_hover_text("문단 삭제").clicked() {
                                         delete_idx = Some(idx);
                                     }
                                 });
@@ -1638,7 +1642,7 @@ impl StudioApp {
                         ui.add_space(8.0);
                         if ui
                             .button(
-                                RichText::new("➕ 여기에 새 문단 작성")
+                                RichText::new("+ 여기에 새 문단 작성")
                                     .strong()
                                     .color(StudioTheme::brand_accent()),
                             )
@@ -1769,12 +1773,12 @@ impl StudioApp {
         ui.vertical(|ui| {
             // Sheet tabs
             ui.horizontal(|ui| {
-                ui.label(RichText::new("📑 워크시트:").strong());
+                ui.label(RichText::new("워크시트:").strong());
                 let mut switch_to = None;
                 if let Some(sheet_model) = &self.spreadsheet_model {
                     for (idx, name) in sheet_model.sheet_names.iter().enumerate() {
                         let is_active = sheet_model.active_sheet_index == idx;
-                        if ui.selectable_label(is_active, format!(" 📊 {} ", name)).clicked() {
+                        if ui.selectable_label(is_active, format!(" {} ", name)).clicked() {
                             switch_to = Some(idx);
                         }
                     }
@@ -1911,8 +1915,8 @@ impl StudioApp {
         ui.vertical(|ui| {
             // Presentation Toolbar
             ui.horizontal(|ui| {
-                ui.label(RichText::new("🎯 슬라이드 덱:").strong());
-                if ui.button("➕ 슬라이드 추가").clicked() {
+                ui.label(RichText::new("슬라이드 덱:").strong());
+                if ui.button("+ 슬라이드 추가").clicked() {
                     let num = model.slides.len() + 1;
                     model.slides.push(SlideItem {
                         slide_number: num,
@@ -2005,6 +2009,8 @@ impl StudioApp {
                                     );
                                     let title_edit = egui::TextEdit::singleline(&mut slide.title)
                                         .font(egui::FontId::proportional(20.0))
+                                        .text_color(Color32::from_rgb(15, 23, 42))
+                                        .frame(egui::Frame::NONE)
                                         .desired_width(620.0);
                                     let resp = ui.add(title_edit);
                                     if resp.changed() {
@@ -2025,12 +2031,14 @@ impl StudioApp {
                                                 .color(StudioTheme::brand_accent()),
                                         );
                                         let edit = egui::TextEdit::singleline(bullet)
-                                            .desired_width(600.0);
+                                            .desired_width(600.0)
+                                            .text_color(Color32::from_rgb(30, 41, 59))
+                                            .frame(egui::Frame::NONE);
                                         let resp = ui.add(edit);
                                         if resp.changed() {
                                             self.is_dirty = true;
                                         }
-                                        if ui.small_button("🗑").on_hover_text("불릿 항목 삭제").clicked()
+                                        if ui.small_button("X").on_hover_text("불릿 항목 삭제").clicked()
                                         {
                                             delete_bullet_idx = Some(b_idx);
                                         }
@@ -2044,7 +2052,7 @@ impl StudioApp {
                                 }
 
                                 ui.add_space(6.0);
-                                if ui.button("➕ 새 불릿 항목 추가").clicked() {
+                                if ui.button("+ 새 불릿 항목 추가").clicked() {
                                     slide.bullet_points.push("새로운 세부 추진 내용 기술".to_string());
                                     self.is_dirty = true;
                                 }

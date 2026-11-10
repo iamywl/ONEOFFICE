@@ -72,6 +72,12 @@ if (mode === "all" || mode === "rust") {
   runStep("Tier 5B: Documentation & Showcase Asset Integrity", "node", [
     "scripts/qa/verify-readme.mjs",
   ]);
+  runStep("Tier 5C: Document Quality & Design Harness (im-not-ai benchmark)", "node", [
+    "scripts/qa/doc_harness.mjs",
+  ]);
+  runStep("Tier 6B: IEEE 1012 V&V (Verification & Validation) Lifecycle Suite", "node", [
+    "scripts/qa/v_and_v_runner.mjs",
+  ]);
 }
 
 if (mode === "all" || mode === "hwpx") {

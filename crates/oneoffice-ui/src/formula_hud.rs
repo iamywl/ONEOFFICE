@@ -85,12 +85,12 @@ impl FormulaHudWidget {
             }
 
             // Quick action buttons
-            if ui.button("✔").on_hover_text("수식 적용 (Enter)").clicked() {
+            if ui.button("V").on_hover_text("수식 적용 (Enter)").clicked() {
                 event = FormulaHudEvent::Commit(self.formula_text.clone());
                 self.show_suggestions = false;
             }
 
-            if ui.button("✖").on_hover_text("취소 (Esc)").clicked() {
+            if ui.button("X").on_hover_text("취소 (Esc)").clicked() {
                 event = FormulaHudEvent::Cancel;
                 self.show_suggestions = false;
             }
