@@ -31,6 +31,49 @@ impl eframe::App for DesktopApp {
         if let Some(path) = self.initial_path.take() {
             self.studio.open_file(ctx, &path);
         }
+
+        if self.studio.request_open_file {
+            self.studio.request_open_file = false;
+            let dialog = rfd::FileDialog::new()
+                .add_filter(
+                    "모든 지원 문서",
+                    &["hwpx", "hwp", "docx", "doc", "xlsx", "xls", "pptx", "ppt", "pdf"],
+                )
+                .add_filter("한글 문서 (*.hwpx, *.hwp)", &["hwpx", "hwp"])
+                .add_filter("워드 문서 (*.docx, *.doc)", &["docx", "doc"])
+                .add_filter("엑셀 문서 (*.xlsx, *.xls)", &["xlsx", "xls"])
+                .add_filter("프레젠테이션 (*.pptx, *.ppt)", &["pptx", "ppt"])
+                .add_filter("PDF 문서 (*.pdf)", &["pdf"]);
+
+            if let Some(path) = dialog.pick_file()
+                && let Some(path_str) = path.to_str()
+            {
+                self.studio.open_file(ctx, path_str);
+            }
+        }
+
+        if self.studio.request_save_as {
+            self.studio.request_save_as = false;
+            let (filter_name, filter_ext) = match self.studio.active_doc {
+                oneoffice_ui::ActiveDocumentKind::Hwpx => ("HWPX Document (*.hwpx)", "hwpx"),
+                oneoffice_ui::ActiveDocumentKind::Docx => ("Word Document (*.docx)", "docx"),
+                oneoffice_ui::ActiveDocumentKind::Xlsx => ("Excel Workbook (*.xlsx)", "xlsx"),
+                oneoffice_ui::ActiveDocumentKind::Pptx => ("PowerPoint Presentation (*.pptx)", "pptx"),
+                oneoffice_ui::ActiveDocumentKind::Pdf => ("PDF Document (*.pdf)", "pdf"),
+            };
+
+            let dialog = rfd::FileDialog::new()
+                .add_filter(filter_name, &[filter_ext])
+                .set_file_name(&self.studio.document_title);
+
+            if let Some(path) = dialog.save_file()
+                && let Some(path_str) = path.to_str()
+            {
+                self.studio.current_file_path = Some(path_str.to_string());
+                let _ = self.studio.save_current_document();
+            }
+        }
+
         self.studio.logic(ctx);
     }
 
@@ -88,5 +131,18 @@ mod tests {
         let app = DesktopApp::new(Some("test_document.hwpx".to_string()));
         assert_eq!(app.initial_path.as_deref(), Some("test_document.hwpx"));
         assert_eq!(app.studio.document_title, "2026 차세대 사업계획서 및 표준용역계약서.hwpx");
+    }
+
+    #[test]
+    fn test_desktop_app_file_requests() {
+        let mut app = DesktopApp::new(None);
+        assert!(!app.studio.request_open_file);
+        assert!(!app.studio.request_save_as);
+
+        app.studio.request_open_file = true;
+        assert!(app.studio.request_open_file);
+
+        app.studio.request_save_as = true;
+        assert!(app.studio.request_save_as);
     }
 }

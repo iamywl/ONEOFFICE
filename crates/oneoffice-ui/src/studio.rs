@@ -126,6 +126,8 @@ pub struct StudioApp {
     pub cell_edit_buffer: String,
     pub current_file_path: Option<String>,
     pub is_dirty: bool,
+    pub request_open_file: bool,
+    pub request_save_as: bool,
 }
 
 impl Default for StudioApp {
@@ -192,6 +194,8 @@ impl StudioApp {
             cell_edit_buffer: String::new(),
             current_file_path: None,
             is_dirty: false,
+            request_open_file: false,
+            request_save_as: false,
         };
 
         // Initialize default presentation model
@@ -299,6 +303,10 @@ impl StudioApp {
         // Handle Ctrl+S / Cmd+S for instant save
         if ui.input(|i| (i.modifiers.command || i.modifiers.ctrl) && i.key_pressed(egui::Key::S)) {
             let _ = self.save_current_document();
+        }
+        // Handle Ctrl+O / Cmd+O for open file
+        if ui.input(|i| (i.modifiers.command || i.modifiers.ctrl) && i.key_pressed(egui::Key::O)) {
+            self.request_open_file = true;
         }
 
         ui.vertical(|ui| {
@@ -824,6 +832,10 @@ impl StudioApp {
     fn show_ribbon_toolbar(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             // File quick actions
+            if ui.button("📂 열기 (Ctrl+O)").clicked() {
+                self.request_open_file = true;
+            }
+
             let save_btn = ui.button(
                 RichText::new(if self.is_dirty { "💾 저장* (Ctrl+S)" } else { "💾 저장 (Ctrl+S)" })
                     .strong()
@@ -831,6 +843,10 @@ impl StudioApp {
             );
             if save_btn.clicked() {
                 let _ = self.save_current_document();
+            }
+
+            if ui.button("💾 다른 이름으로...").clicked() {
+                self.request_save_as = true;
             }
 
             ui.separator();
