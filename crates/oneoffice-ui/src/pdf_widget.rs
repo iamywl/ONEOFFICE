@@ -160,7 +160,7 @@ impl PdfViewerWidget {
             ui.add(egui::TextEdit::singleline(&mut self.seal_label).desired_width(100.0));
 
             // Seal stamping actions
-            if ui.button("🔴 (인) 앵커 자동 날인").clicked()
+            if ui.button("(인) 앵커 자동 날인").clicked()
                 && let Err(e) = self.auto_stamp_anchor()
             {
                 self.status_message = e;
@@ -168,7 +168,7 @@ impl PdfViewerWidget {
 
             // Delete selected signature button
             if let Some(sel_id) = &self.selected_sig_id.clone() {
-                if ui.button("🗑️ 선택 서명 삭제").clicked() {
+                if ui.button("선택 서명 삭제").clicked() {
                     let _ = self.layer_stack.remove_signature(sel_id);
                     self.selected_sig_id = None;
                     self.status_message = "선택된 서명을 삭제했습니다.".to_string();

@@ -97,11 +97,12 @@ mod tests {
         app.active_doc = ActiveDocumentKind::Docx;
         app.document_title = "표준용역계약서_실측보고.docx".to_string();
         let bytes = find_doc("dummy_report.docx");
+        app.chart_widget.is_visible = true;
 
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
-            .with_size(egui::vec2(1440.0, 900.0))
+            .with_size(egui::vec2(1440.0, 1600.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
                 if state.doc_textures.is_empty() {
                     let ctx = ui.ctx().clone();
@@ -229,7 +230,7 @@ mod tests {
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
-            .with_size(egui::vec2(1440.0, 1200.0))
+            .with_size(egui::vec2(1440.0, 1600.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
                 state.show(ui);
             }, app);

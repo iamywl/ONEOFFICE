@@ -689,7 +689,7 @@ impl StudioApp {
         self.pdf_widget.load_pdf_bytes(ctx, &pdf_bytes)
             .map_err(|e| format!("PDF 뷰어 로드 실패: {e}"))?;
 
-        self.status_text = format!("📤 PDF 내보내기 성공 ({} bytes): 전자서명 뷰어로 전환되었습니다.", pdf_bytes.len());
+        self.status_text = format!("[PDF] 내보내기 성공 ({} bytes): 전자서명 뷰어로 전환되었습니다.", pdf_bytes.len());
         Ok(pdf_bytes)
     }
 
@@ -1230,7 +1230,7 @@ impl StudioApp {
         }
 
         self.is_dirty = false;
-        self.status_text = format!("💾 문서 무손실 저장 완료: {target_path}");
+        self.status_text = format!("[저장] 문서 무손실 저장 완료: {target_path}");
         Ok(target_path)
     }
 
@@ -1685,6 +1685,13 @@ impl StudioApp {
                     ui.set_width(680.0);
                     ui.set_min_height(900.0);
 
+                    let current_font_size = self.format_state.font_size;
+                    let current_is_bold = self.format_state.is_bold;
+                    let mut add_new_para = false;
+                    let mut insert_table = false;
+                    let mut insert_chart = false;
+                    let mut insert_diagram = false;
+
                     // Render document title and metadata
                     if let Some(doc) = &mut self.doc_model {
                         ui.horizontal(|ui| {
@@ -1770,24 +1777,40 @@ impl StudioApp {
                             }
                         }
 
-                        // Add new paragraph button
+                        // In-place Block Insertion Action Bar (Paragraph, Table, Chart, Diagram)
                         ui.add_space(8.0);
-                        if ui
-                            .button(
-                                RichText::new("+ 여기에 새 문단 작성")
-                                    .strong()
-                                    .color(StudioTheme::brand_accent()),
-                            )
-                            .clicked()
-                        {
+                        ui.horizontal(|ui| {
+                            if ui
+                                .button(
+                                    RichText::new("+ 새 문단")
+                                        .strong()
+                                        .color(StudioTheme::brand_accent()),
+                                )
+                                .clicked()
+                            {
+                                add_new_para = true;
+                            }
+
+                            if ui.button("+ 표 삽입").clicked() {
+                                insert_table = true;
+                            }
+
+                            if ui.button("+ 차트 삽입").clicked() {
+                                insert_chart = true;
+                            }
+
+                            if ui.button("+ 도식 삽입").clicked() {
+                                insert_diagram = true;
+                            }
+                        });
+
+                        if add_new_para {
                             doc.paragraphs.push(DocParagraph {
                                 text: "새로운 제안 내용을 입력하십시오.".to_string(),
                                 is_heading: false,
-                                font_size: self.format_state.font_size,
-                                is_bold: self.format_state.is_bold,
+                                font_size: current_font_size,
+                                is_bold: current_is_bold,
                             });
-                            self.active_paragraph_idx = Some(doc.paragraphs.len() - 1);
-                            self.is_dirty = true;
                         }
 
                         // Render real image textures if present
@@ -1795,7 +1818,7 @@ impl StudioApp {
                             ui.add_space(12.0);
                             for (name, tex) in &self.doc_textures {
                                 ui.label(
-                                    RichText::new(format!("🖼 삽입된 그림 자료: {name}"))
+                                    RichText::new(format!("[그림 자료] {name}"))
                                         .size(11.0)
                                         .color(Color32::from_rgb(100, 116, 139)),
                                 );
@@ -1805,10 +1828,6 @@ impl StudioApp {
                                 ui.image((tex.id(), egui::vec2(render_w, render_h)));
                                 ui.add_space(8.0);
                             }
-                        } else {
-                            // In-place proposal infographic sub-canvas fallback
-                            ui.add_space(8.0);
-                            self.diagram_widget.show(ui);
                         }
                     } else {
                         // Default template view
@@ -1826,7 +1845,43 @@ impl StudioApp {
                         ui.add_space(8.0);
                     }
 
-                    if self.active_doc != ActiveDocumentKind::Docx {
+                    if add_new_para {
+                        if let Some(doc) = &self.doc_model {
+                            self.active_paragraph_idx = Some(doc.paragraphs.len() - 1);
+                        }
+                        self.is_dirty = true;
+                    }
+
+                    if insert_table {
+                        self.push_undo_snapshot();
+                        self.table_data = vec![
+                            vec!["구분".into(), "단위".into(), "수량".into(), "단가(원)".into(), "소계(원)".into()],
+                            vec!["클라우드 도입".into(), "식".into(), "1".into(), "12500000".into(), "12500000".into()],
+                            vec!["소프트웨어 라이선스".into(), "카피".into(), "5".into(), "3000000".into(), "15000000".into()],
+                            vec!["유지보수 기술지원".into(), "월".into(), "12".into(), "500000".into(), "6000000".into()],
+                            vec!["합계 (SUM)".into(), "-".into(), "-".into(), "-".into(), "33500000".into()],
+                        ];
+                        self.recalculate_table_sums();
+                        self.is_dirty = true;
+                        self.status_text = "본문에 5x5 엑셀 수식 연동 표 삽입 완료".to_string();
+                    }
+
+                    if insert_chart {
+                        self.push_undo_snapshot();
+                        self.chart_widget.is_visible = true;
+                        let ctx = ui.ctx().clone();
+                        self.chart_widget.rebuild_from_table(&ctx, &self.table_data, self.theme == StudioTheme::Dark);
+                        self.is_dirty = true;
+                        self.status_text = "본문에 26종 엑셀 벡터 차트 삽입 완료".to_string();
+                    }
+
+                    if insert_diagram {
+                        self.push_undo_snapshot();
+                        self.status_text = "본문에 제안서 도식화 캔버스 삽입 완료".to_string();
+                    }
+
+                    // Common Compound Blocks: Table, Chart, and Diagram are First-Class in ALL document types (DOCX & HWPX)
+                    {
                         ui.add_space(12.0);
                         ui.horizontal(|ui| {
                             ui.label(
@@ -2164,7 +2219,7 @@ impl StudioApp {
                                     }
 
                                     if total_slides > 1
-                                        && ui.small_button("🗑").on_hover_text("슬라이드 삭제").clicked()
+                                        && ui.small_button("X").on_hover_text("슬라이드 삭제").clicked()
                                     {
                                         delete_slide_idx = Some(idx);
                                     }
