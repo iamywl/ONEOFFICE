@@ -186,7 +186,7 @@ impl PdfViewerWidget {
 
         ui.add_space(8.0);
 
-        // PDF Page view area with signature overlay
+        // PDF Page view area with signature overlay (centered paper with crisp border)
         if let Some(session) = &self.session {
             let [page_w_pt, page_h_pt] = session
                 .page_dimensions_pt(self.current_page)
@@ -194,81 +194,89 @@ impl PdfViewerWidget {
             let display_w = page_w_pt * self.zoom_scale;
             let display_h = page_h_pt * self.zoom_scale;
 
-            let (response, painter) =
-                ui.allocate_painter(Vec2::new(display_w, display_h), egui::Sense::click());
-            let origin = response.rect.min;
+            ui.vertical_centered(|ui| {
+                egui::Frame::canvas(ui.style())
+                    .fill(Color32::WHITE)
+                    .stroke(Stroke::new(1.0, Color32::from_rgb(203, 213, 225)))
+                    .inner_margin(0.0)
+                    .show(ui, |ui| {
+                        let (response, painter) =
+                            ui.allocate_painter(Vec2::new(display_w, display_h), egui::Sense::click());
+                        let origin = response.rect.min;
 
-            // Draw base PDF page
-            if let Some(tex) = &self.page_texture {
-                painter.image(
-                    tex.id(),
-                    response.rect,
-                    Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
-                    Color32::WHITE,
-                );
-            }
+                        // Draw base PDF page
+                        if let Some(tex) = &self.page_texture {
+                            painter.image(
+                                tex.id(),
+                                response.rect,
+                                Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
+                                Color32::WHITE,
+                            );
+                        }
 
-            // Draw placed signatures on this page
-            let mut clicked_sig_id = None;
-            for sig in self.layer_stack.signatures() {
-                if sig.page_index == self.current_page {
-                    let [rx, ry, rw, rh] = sig.rect_pt;
-                    let sig_rect = Rect::from_min_size(
-                        Pos2::new(origin.x + rx * self.zoom_scale, origin.y + ry * self.zoom_scale),
-                        Vec2::new(rw * self.zoom_scale, rh * self.zoom_scale),
-                    );
+                        // Draw placed signatures on this page
+                        let mut clicked_sig_id = None;
+                        for sig in self.layer_stack.signatures() {
+                            if sig.page_index == self.current_page {
+                                let [rx, ry, rw, rh] = sig.rect_pt;
+                                let sig_rect = Rect::from_min_size(
+                                    Pos2::new(origin.x + rx * self.zoom_scale, origin.y + ry * self.zoom_scale),
+                                    Vec2::new(rw * self.zoom_scale, rh * self.zoom_scale),
+                                );
 
-                    let is_selected = self.selected_sig_id.as_deref() == Some(&sig.id);
+                                let is_selected = self.selected_sig_id.as_deref() == Some(&sig.id);
 
-                    // Red seal indicator circle
-                    let center = sig_rect.center();
-                    let radius = (rw.min(rh) * self.zoom_scale) * 0.45;
-                    painter.circle_stroke(
-                        center,
-                        radius,
-                        Stroke::new(2.0, Color32::from_rgb(220, 38, 38)),
-                    );
-                    painter.text(
-                        center,
-                        egui::Align2::CENTER_CENTER,
-                        "印",
-                        egui::FontId::proportional(14.0 * self.zoom_scale),
-                        Color32::from_rgb(220, 38, 38),
-                    );
+                                // Red seal indicator circle
+                                let center = sig_rect.center();
+                                let radius = (rw.min(rh) * self.zoom_scale) * 0.45;
+                                painter.circle_stroke(
+                                    center,
+                                    radius,
+                                    Stroke::new(2.0, Color32::from_rgb(220, 38, 38)),
+                                );
+                                painter.text(
+                                    center,
+                                    egui::Align2::CENTER_CENTER,
+                                    "印",
+                                    egui::FontId::proportional(14.0 * self.zoom_scale),
+                                    Color32::from_rgb(220, 38, 38),
+                                );
 
-                    // Selection highlight box
-                    if is_selected {
-                        painter.rect_stroke(
-                            sig_rect.expand(4.0),
-                            4.0,
-                            Stroke::new(2.0, Color32::from_rgb(37, 99, 235)),
-                            egui::StrokeKind::Outside,
-                        );
-                    }
+                                // Selection highlight box
+                                if is_selected {
+                                    painter.rect_stroke(
+                                        sig_rect.expand(4.0),
+                                        4.0,
+                                        Stroke::new(2.0, Color32::from_rgb(37, 99, 235)),
+                                        egui::StrokeKind::Outside,
+                                    );
+                                }
 
-                    if response.clicked()
-                        && let Some(pos) = response.interact_pointer_pos()
-                        && sig_rect.contains(pos)
-                    {
-                        clicked_sig_id = Some(sig.id.clone());
-                    }
-                }
-            }
+                                if response.clicked()
+                                    && let Some(pos) = response.interact_pointer_pos()
+                                    && sig_rect.contains(pos)
+                                {
+                                    clicked_sig_id = Some(sig.id.clone());
+                                }
+                            }
+                        }
 
-            // Handle click
-            if response.clicked()
-                && let Some(pos) = response.interact_pointer_pos()
-            {
-                if let Some(hit_id) = clicked_sig_id {
-                    self.selected_sig_id = Some(hit_id);
-                    self.status_message = "서명이 선택되었습니다. (삭제 가능)".to_string();
-                } else {
-                    self.selected_sig_id = None;
-                    let click_x = (pos.x - origin.x) / self.zoom_scale - 24.0;
-                    let click_y = (pos.y - origin.y) / self.zoom_scale - 24.0;
-                    let _ = self.stamp_seal_at(click_x, click_y);
-                }
-            }
+                        // Handle click
+                        if response.clicked()
+                            && let Some(pos) = response.interact_pointer_pos()
+                        {
+                            if let Some(hit_id) = clicked_sig_id {
+                                self.selected_sig_id = Some(hit_id);
+                                self.status_message = "서명이 선택되었습니다. (삭제 가능)".to_string();
+                            } else {
+                                self.selected_sig_id = None;
+                                let click_x = (pos.x - origin.x) / self.zoom_scale - 24.0;
+                                let click_y = (pos.y - origin.y) / self.zoom_scale - 24.0;
+                                let _ = self.stamp_seal_at(click_x, click_y);
+                            }
+                        }
+                    });
+            });
         }
     }
 }

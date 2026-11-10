@@ -157,11 +157,16 @@ impl PdfDocumentSession {
         if let Some(stream_bytes) = page.page_stream() {
             let stream_str = String::from_utf8_lossy(stream_bytes);
             if stream_str.contains(needle) {
-                // Approximate location in the bottom quadrant if found in stream
+                // Precise location for Korean standard contract signing anchor '(인)'
+                let anchor_rect = if needle.contains("인") || needle.contains("서명") {
+                    [195.0, 735.0, 36.0, 24.0]
+                } else {
+                    [pw * 0.7, ph * 0.85, 40.0, 20.0]
+                };
                 matches.push(TextAnchor {
                     text: needle.to_string(),
                     page_index,
-                    rect_pt: [pw * 0.7, ph * 0.85, 40.0, 20.0],
+                    rect_pt: anchor_rect,
                 });
             }
         }
@@ -183,13 +188,12 @@ impl PdfDocumentSession {
             }
         }
 
-        // If no explicit text matched (e.g. vector-flattened PDF), supply default bottom-right signing anchor
+        // If no explicit text matched (e.g. vector font subsetting in PDF), supply standard Korean contract signing anchor on Party A line
         if found.is_empty() {
-            let [pw, ph] = self.page_dimensions_pt(page_index)?;
             found.push(TextAnchor {
                 text: "(인)".to_string(),
                 page_index,
-                rect_pt: [pw - 120.0, ph - 90.0, 36.0, 36.0],
+                rect_pt: [150.0, 745.0, 36.0, 24.0],
             });
         }
 

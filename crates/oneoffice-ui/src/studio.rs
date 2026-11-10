@@ -859,7 +859,47 @@ impl StudioApp {
             };
 
             if let Ok(sec_xml) = pkg.section_xml(0) {
-                for part in sec_xml.split("<hp:t>") {
+                // Parse structured 2D table if <hp:tbl> is present
+                if let Some((_, tbl_xml)) = sec_xml.split_once("<hp:tbl")
+                    && let Some((tbl_body, _)) = tbl_xml.split_once("</hp:tbl>")
+                {
+                    let mut table_rows: Vec<Vec<String>> = Vec::new();
+                    for tr in tbl_body.split("<hp:tr") {
+                        if let Some((tr_content, _)) = tr.split_once("</hp:tr>") {
+                            let mut row_cells = Vec::new();
+                            for tc in tr_content.split("<hp:tc") {
+                                if let Some((tc_content, _)) = tc.split_once("</hp:tc>") {
+                                    let mut cell_text = String::new();
+                                    for t in tc_content.split("<hp:t>") {
+                                        if let Some((val, _)) = t.split_once("</hp:t>") {
+                                            if !cell_text.is_empty() {
+                                                cell_text.push(' ');
+                                            }
+                                            cell_text.push_str(val.trim());
+                                        }
+                                    }
+                                    row_cells.push(cell_text);
+                                }
+                            }
+                            if !row_cells.is_empty() {
+                                table_rows.push(row_cells);
+                            }
+                        }
+                    }
+                    if !table_rows.is_empty() {
+                        self.table_data = table_rows.clone();
+                        loaded.tables.push(table_rows);
+                    }
+                }
+
+                // Extract paragraphs strictly outside <hp:tbl> to preserve document structure
+                let text_part = if let Some((before_tbl, _)) = sec_xml.split_once("<hp:tbl") {
+                    before_tbl
+                } else {
+                    &sec_xml
+                };
+
+                for part in text_part.split("<hp:t>") {
                     if let Some((t_content, _)) = part.split_once("</hp:t>") {
                         let clean = t_content.trim();
                         if !clean.is_empty() {
@@ -1597,6 +1637,10 @@ impl StudioApp {
                         // Render parsed paragraphs with real in-place multiline editing
                         let mut delete_idx = None;
                         for (idx, para) in doc.paragraphs.iter_mut().enumerate() {
+                            let clean_text = para.text.replace('\u{FFFC}', "").replace("[]", "");
+                            if clean_text.trim().is_empty() {
+                                continue;
+                            }
                             let is_active = self.active_paragraph_idx == Some(idx);
                             if is_active {
                                 ui.horizontal(|ui| {
@@ -1616,9 +1660,9 @@ impl StudioApp {
                                 });
                             } else {
                                 let text_style = if para.is_bold {
-                                    RichText::new(&para.text).strong().size(para.font_size)
+                                    RichText::new(&clean_text).strong().size(para.font_size)
                                 } else {
-                                    RichText::new(&para.text).size(para.font_size)
+                                    RichText::new(&clean_text).size(para.font_size)
                                 };
                                 let resp = ui.selectable_label(
                                     false,
@@ -1636,6 +1680,24 @@ impl StudioApp {
                             doc.paragraphs.remove(del);
                             self.active_paragraph_idx = None;
                             self.is_dirty = true;
+                        }
+
+                        // Lazily compile textures if images exist but textures not loaded yet
+                        if self.doc_textures.is_empty() && !doc.images.is_empty() {
+                            for img in &doc.images {
+                                if let Ok(dyn_img) = image::load_from_memory(&img.png_bytes) {
+                                    let rgba = dyn_img.to_rgba8();
+                                    let size = [rgba.width() as usize, rgba.height() as usize];
+                                    let pixels = rgba.into_raw();
+                                    let color_img = egui::ColorImage::from_rgba_unmultiplied(size, &pixels);
+                                    let tex = ui.ctx().load_texture(
+                                        format!("docx_img_{}", img.name),
+                                        color_img,
+                                        TextureOptions::LINEAR,
+                                    );
+                                    self.doc_textures.push((img.name.clone(), tex));
+                                }
+                            }
                         }
 
                         // Add new paragraph button
@@ -1702,69 +1764,71 @@ impl StudioApp {
                         self.diagram_widget.show(ui);
                     }
 
-                    ui.add_space(16.0);
-                    ui.label(
-                        RichText::new("2. 513함수 연동 예산 수식표 (클릭 시 수식바 연동)")
-                            .strong()
-                            .color(Color32::from_rgb(15, 23, 42)),
-                    );
+                    if self.active_doc != ActiveDocumentKind::Docx {
+                        ui.add_space(16.0);
+                        ui.label(
+                            RichText::new("2. 513함수 연동 예산 수식표 (클릭 시 수식바 연동)")
+                                .strong()
+                                .color(Color32::from_rgb(15, 23, 42)),
+                        );
 
-                    // Interactive Excel Formula Table Grid
-                    egui::Grid::new("hwpx_calc_table")
-                        .striped(true)
-                        .min_col_width(120.0)
-                        .show(ui, |ui| {
-                            let mut clicked_cell = None;
-                            for (row_idx, row) in self.table_data.iter().enumerate() {
-                                for (col_idx, val) in row.iter().enumerate() {
-                                    let is_header = row_idx == 0 || col_idx == 0;
-                                    let is_selected =
-                                        self.table_selected_cell == (row_idx, col_idx);
+                        // Interactive Excel Formula Table Grid
+                        egui::Grid::new("hwpx_calc_table")
+                            .striped(true)
+                            .min_col_width(120.0)
+                            .show(ui, |ui| {
+                                let mut clicked_cell = None;
+                                for (row_idx, row) in self.table_data.iter().enumerate() {
+                                    for (col_idx, val) in row.iter().enumerate() {
+                                        let is_header = row_idx == 0 || col_idx == 0;
+                                        let is_selected =
+                                            self.table_selected_cell == (row_idx, col_idx);
 
-                                    let cell_text = if is_header {
-                                        RichText::new(val)
-                                            .strong()
-                                            .color(Color32::from_rgb(15, 23, 42))
-                                    } else if row_idx == 3 {
-                                        RichText::new(val)
-                                            .strong()
-                                            .color(Color32::from_rgb(37, 99, 235))
-                                    } else {
-                                        RichText::new(val).color(Color32::from_rgb(51, 65, 85))
-                                    };
+                                        let cell_text = if is_header {
+                                            RichText::new(val)
+                                                .strong()
+                                                .color(Color32::from_rgb(15, 23, 42))
+                                        } else if row_idx == 3 {
+                                            RichText::new(val)
+                                                .strong()
+                                                .color(Color32::from_rgb(37, 99, 235))
+                                        } else {
+                                            RichText::new(val).color(Color32::from_rgb(51, 65, 85))
+                                        };
 
-                                    let resp = ui.selectable_label(is_selected, cell_text);
-                                    if resp.clicked() {
-                                        clicked_cell = Some((row_idx, col_idx));
+                                        let resp = ui.selectable_label(is_selected, cell_text);
+                                        if resp.clicked() {
+                                            clicked_cell = Some((row_idx, col_idx));
+                                        }
+                                    }
+                                    ui.end_row();
+                                }
+
+                                if let Some((r, c)) = clicked_cell {
+                                    self.table_selected_cell = (r, c);
+                                    let col_letter = (b'A' + c as u8) as char;
+                                    self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
+                                    if r == 3 && c > 0 {
+                                        self.formula_hud.formula_text =
+                                            format!("=SUM({col_letter}2:{col_letter}3)");
+                                    } else if c == 3 && r > 0 {
+                                        self.formula_hud.formula_text =
+                                            format!("=SUM(B{}:C{})", r + 1, r + 1);
+                                    } else if let Some(val) =
+                                        self.table_data.get(r).and_then(|row| row.get(c))
+                                    {
+                                        self.formula_hud.formula_text = val.clone();
                                     }
                                 }
-                                ui.end_row();
-                            }
+                            });
 
-                            if let Some((r, c)) = clicked_cell {
-                                self.table_selected_cell = (r, c);
-                                let col_letter = (b'A' + c as u8) as char;
-                                self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
-                                if r == 3 && c > 0 {
-                                    self.formula_hud.formula_text =
-                                        format!("=SUM({col_letter}2:{col_letter}3)");
-                                } else if c == 3 && r > 0 {
-                                    self.formula_hud.formula_text =
-                                        format!("=SUM(B{}:C{})", r + 1, r + 1);
-                                } else if let Some(val) =
-                                    self.table_data.get(r).and_then(|row| row.get(c))
-                                {
-                                    self.formula_hud.formula_text = val.clone();
-                                }
-                            }
-                        });
-
-                    ui.add_space(8.0);
-                    ui.label(
-                        RichText::new("※ 셀을 클릭하면 상단 Formula HUD를 통해 513개 엑셀 함수(=SUM 등)가 실시간 동기화 및 재계산됩니다.")
-                            .size(11.0)
-                            .color(Color32::from_rgb(100, 116, 139)),
-                    );
+                        ui.add_space(8.0);
+                        ui.label(
+                            RichText::new("※ 셀을 클릭하면 상단 Formula HUD를 통해 513개 엑셀 함수(=SUM 등)가 실시간 동기화 및 재계산됩니다.")
+                                .size(11.0)
+                                .color(Color32::from_rgb(100, 116, 139)),
+                        );
+                    }
                 });
         });
     }
@@ -1808,19 +1872,30 @@ impl StudioApp {
 
             ui.add_space(8.0);
 
-            // Full Spreadsheet Grid
+            // Full Spreadsheet Grid (Expanding across viewport with standard headers)
             egui::ScrollArea::both()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
+                    let total_cols = 8.max(self.table_data.first().map_or(4, |r| r.len()));
+                    let total_rows = 16.max(self.table_data.len());
+
                     egui::Grid::new("xlsx_full_grid")
                         .striped(true)
-                        .min_col_width(100.0)
+                        .min_col_width(115.0)
                         .show(ui, |ui| {
                             // Column Headers: Corner + A, B, C...
-                            ui.label(RichText::new("◢").color(Color32::GRAY));
-                            for c in 0..self.table_data.first().map_or(4, |r| r.len()) {
+                            ui.label(RichText::new(" ◢ ").color(Color32::from_rgb(148, 163, 184)));
+                            for c in 0..total_cols {
                                 let col_name = (b'A' + c as u8) as char;
-                                ui.label(RichText::new(format!("  {col_name}  ")).strong().color(Color32::from_rgb(100, 116, 139)));
+                                ui.label(
+                                    RichText::new(format!("     {col_name}     "))
+                                        .strong()
+                                        .size(13.0)
+                                        .color(match self.theme {
+                                            StudioTheme::Dark => Color32::from_rgb(226, 232, 240),
+                                            StudioTheme::Light => Color32::from_rgb(71, 85, 105),
+                                        }),
+                                );
                             }
                             ui.end_row();
 
@@ -1828,46 +1903,67 @@ impl StudioApp {
                             let mut start_edit = None;
                             let mut commit_edit = false;
 
-                            for row_idx in 0..self.table_data.len() {
-                                let row_len = self.table_data[row_idx].len();
+                            for row_idx in 0..total_rows {
                                 // Row Header: 1, 2, 3...
                                 ui.label(
-                                    RichText::new(format!("{}", row_idx + 1))
+                                    RichText::new(format!("  {}  ", row_idx + 1))
                                         .monospace()
-                                        .color(Color32::from_rgb(100, 116, 139)),
+                                        .size(12.0)
+                                        .color(match self.theme {
+                                            StudioTheme::Dark => Color32::from_rgb(148, 163, 184),
+                                            StudioTheme::Light => Color32::from_rgb(100, 116, 139),
+                                        }),
                                 );
 
-                                for col_idx in 0..row_len {
+                                for col_idx in 0..total_cols {
                                     let is_selected = self.table_selected_cell == (row_idx, col_idx);
                                     let is_editing = self.inline_editing_cell == Some((row_idx, col_idx));
 
+                                    let cell_val = self
+                                        .table_data
+                                        .get(row_idx)
+                                        .and_then(|r| r.get(col_idx))
+                                        .cloned()
+                                        .unwrap_or_default();
+
                                     if is_editing {
                                         let edit = egui::TextEdit::singleline(&mut self.cell_edit_buffer)
-                                            .desired_width(90.0);
+                                            .desired_width(100.0);
                                         let resp = ui.add(edit);
                                         if resp.lost_focus() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                                             commit_edit = true;
                                         }
                                     } else {
-                                        let val = &self.table_data[row_idx][col_idx];
-                                        let is_num = val.parse::<f64>().is_ok();
+                                        let is_num = cell_val.parse::<f64>().is_ok();
+                                        let display_str = if cell_val.is_empty() {
+                                            " ".to_string()
+                                        } else {
+                                            cell_val.clone()
+                                        };
+
                                         let text_color = if is_selected {
                                             Color32::from_rgb(37, 99, 235)
                                         } else if is_num {
-                                            Color32::from_rgb(16, 185, 129)
+                                            match self.theme {
+                                                StudioTheme::Dark => Color32::from_rgb(52, 211, 153),
+                                                StudioTheme::Light => Color32::from_rgb(16, 185, 129),
+                                            }
                                         } else {
-                                            Color32::from_rgb(15, 23, 42)
+                                            match self.theme {
+                                                StudioTheme::Dark => Color32::from_rgb(241, 245, 249),
+                                                StudioTheme::Light => Color32::from_rgb(15, 23, 42),
+                                            }
                                         };
 
                                         let resp = ui.selectable_label(
                                             is_selected,
-                                            RichText::new(val).color(text_color),
+                                            RichText::new(&display_str).color(text_color).size(13.0),
                                         );
                                         if resp.clicked() {
                                             clicked_cell = Some((row_idx, col_idx));
                                         }
                                         if resp.double_clicked() {
-                                            start_edit = Some((row_idx, col_idx, val.clone()));
+                                            start_edit = Some((row_idx, col_idx, cell_val));
                                         }
                                     }
                                 }
@@ -1875,13 +1971,20 @@ impl StudioApp {
                             }
 
                             if commit_edit {
-                                if let Some((r, c)) = self.inline_editing_cell
-                                    && let Some(row) = self.table_data.get_mut(r)
-                                    && let Some(cell) = row.get_mut(c)
-                                {
-                                    *cell = self.cell_edit_buffer.clone();
-                                    self.recalculate_table_sums();
-                                    self.is_dirty = true;
+                                if let Some((r, c)) = self.inline_editing_cell {
+                                    if r >= self.table_data.len() {
+                                        self.table_data.resize_with(r + 1, Vec::new);
+                                    }
+                                    if let Some(row) = self.table_data.get_mut(r) {
+                                        if c >= row.len() {
+                                            row.resize_with(c + 1, String::new);
+                                        }
+                                        if let Some(cell) = row.get_mut(c) {
+                                            *cell = self.cell_edit_buffer.clone();
+                                            self.recalculate_table_sums();
+                                            self.is_dirty = true;
+                                        }
+                                    }
                                 }
                                 self.inline_editing_cell = None;
                             }
@@ -1903,6 +2006,17 @@ impl StudioApp {
                             }
                         });
                 });
+
+            ui.add_space(8.0);
+            ui.horizontal(|ui| {
+                let (r, c) = self.table_selected_cell;
+                let col_letter = (b'A' + c as u8) as char;
+                ui.label(
+                    RichText::new(format!("READY · 활성 셀 [{col_letter}{}] · 시트 크기 16×8 · 513개 엑셀 수식 및 차트 엔진 가동 중", r + 1))
+                        .size(11.0)
+                        .color(Color32::from_rgb(100, 116, 139)),
+                );
+            });
         });
     }
 
@@ -1997,10 +2111,10 @@ impl StudioApp {
                             .stroke(egui::Stroke::new(1.0, Color32::from_rgb(203, 213, 225)))
                             .inner_margin(24.0)
                             .show(ui, |ui| {
-                                ui.set_width(720.0);
-                                ui.set_min_height(450.0);
+                                ui.set_width(840.0);
+                                ui.set_min_height(472.5);
 
-                                // In-place editable slide title
+                                // In-place editable slide title with 16:9 Widescreen badge
                                 ui.horizontal(|ui| {
                                     ui.label(
                                         RichText::new("제목:")
@@ -2011,11 +2125,19 @@ impl StudioApp {
                                         .font(egui::FontId::proportional(20.0))
                                         .text_color(Color32::from_rgb(15, 23, 42))
                                         .frame(egui::Frame::NONE)
-                                        .desired_width(620.0);
+                                        .desired_width(520.0);
                                     let resp = ui.add(title_edit);
                                     if resp.changed() {
                                         self.is_dirty = true;
                                     }
+
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        ui.label(
+                                            RichText::new("16:9 Widescreen (1920×1080)")
+                                                .size(10.0)
+                                                .color(StudioTheme::brand_accent()),
+                                        );
+                                    });
                                 });
 
                                 ui.separator();
@@ -2031,7 +2153,7 @@ impl StudioApp {
                                                 .color(StudioTheme::brand_accent()),
                                         );
                                         let edit = egui::TextEdit::singleline(bullet)
-                                            .desired_width(600.0)
+                                            .desired_width(700.0)
                                             .text_color(Color32::from_rgb(30, 41, 59))
                                             .frame(egui::Frame::NONE);
                                         let resp = ui.add(edit);
@@ -2057,9 +2179,13 @@ impl StudioApp {
                                     self.is_dirty = true;
                                 }
 
-                                ui.add_space(16.0);
-                                // Inline presentation diagram sub-canvas
-                                self.diagram_widget.show(ui);
+                                ui.add_space(12.0);
+                                // Inline presentation diagram sub-canvas (bounded within 16:9 frame)
+                                egui::ScrollArea::vertical()
+                                    .max_height(250.0)
+                                    .show(ui, |ui| {
+                                        self.diagram_widget.show(ui);
+                                    });
                             });
                     }
                 });

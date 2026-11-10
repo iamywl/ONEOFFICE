@@ -97,13 +97,16 @@ mod tests {
         app.active_doc = ActiveDocumentKind::Docx;
         app.document_title = "표준용역계약서_실측보고.docx".to_string();
         let bytes = find_doc("dummy_report.docx");
-        app.parse_docx_bytes_headless(&bytes);
 
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
             .with_size(egui::vec2(1440.0, 900.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
+                if state.doc_textures.is_empty() {
+                    let ctx = ui.ctx().clone();
+                    state.load_docx_bytes(&ctx, &bytes);
+                }
                 state.show(ui);
             }, app);
 

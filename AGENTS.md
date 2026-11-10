@@ -59,6 +59,8 @@ flowchart TD
     M --> PKG
 
     PKG --> Q["09. 적대적 실측 QA & 비주얼 감사관\n09-adversarial-qa-auditor.md"]
+    PKG --> UIX["11. UI/UX 디자인 & 실측 경험 감사관\n11-uiux-design-auditor.md"]
+    UIX -->|"UI/UX 결함 보고 & 디자인 지시"| U
     Q -->|"6단계 실측 게이트 100% 통과"| DOC["10. 문서 디자인 & 비주얼 쇼케이스\n10-doc-design-showcase-architect.md"]
     DOC -->|"하네스 통과 & 최종 쇼케이스 완성"| Orch
     Q -->|"결함 발견 시 재현 좌표와 함께 반려"| Orch
@@ -76,6 +78,7 @@ flowchart TD
 | **08** | `oneoffice-release-governor` | `.agents/agents/08-crossplatform-packaging-governor.md` | `extensions/oneoffice-vscode/**`, `apps/oneoffice-desktop/**`, `packaging/**` | 올인원 VS Code VSIX 패키징 및 **macOS · Windows · Linux** 네이티브 번들/설치기/CI 구축 |
 | **09** | `oneoffice-qa-auditor` | `.agents/agents/09-adversarial-qa-auditor.md` | `tests/**`, `scripts/qa/**`, `docs/QA_VERIFICATION_MATRIX.md` | 무신뢰(Zero-Trust) 6단계 실측 검증(스키마, 수식 오라클, 도식 BBox, PDF 서명 무결성, VSIX/네이티브 캡처) |
 | **10** | `oneoffice-doc-designer` | `.agents/agents/10-doc-design-showcase-architect.md` | `README.md`, `README.en.md`, `docs/SHOWCASE_GALLERY.md`, `docs/assets/**`, `scripts/qa/doc_harness.mjs` | `im-not-ai` 벤치마크 기반 쇼케이스 문서화, 캡처 기반 기능/장점 실측 명세, 문서 검증 하네스 운용 |
+| **11** | `oneoffice-uiux-auditor` | `.agents/agents/11-uiux-design-auditor.md` | `docs/design/**`, `docs/UIUX_*.md`, `docs/assets/uiux_audit/**` | UI/UX 디자인 시스템 수립, 실측 화면 캡처 전수 감사, 비주얼/에르고노믹스 결함 식별 및 개발 에이전트 지시 |
 
 ---
 
