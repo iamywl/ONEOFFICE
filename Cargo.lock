@@ -2376,6 +2376,9 @@ dependencies = [
  "egui",
  "egui_extras",
  "egui_kittest",
+ "gridcraft-core",
+ "gridcraft-model",
+ "gridcraft-xlsx",
  "image",
  "oneoffice-bridge",
  "oneoffice-diagram",
@@ -2384,7 +2387,10 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 2.0.21",
+ "wordcraft-doc",
+ "wordcraft-docx",
  "wordcraft-fonts",
+ "zip",
 ]
 
 [[package]]

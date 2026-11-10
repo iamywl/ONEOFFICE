@@ -34,6 +34,45 @@ mod tests {
         assert_eq!(app.theme, StudioTheme::Dark);
         assert!(!app.formula_hud.cell_address.is_empty());
         assert!(app.diagram_widget.last_scene.is_some());
+        assert!(app.spreadsheet_model.is_some());
+        assert!(app.presentation_model.is_some());
+    }
+
+    #[test]
+    fn test_docx_parsing_and_embedded_images() {
+        let mut app = StudioApp::new();
+        for path in [
+            "test_documents/dummy_report.docx",
+            "../../test_documents/dummy_report.docx",
+        ] {
+            if let Ok(bytes) = std::fs::read(path) {
+                app.parse_docx_bytes_headless(&bytes);
+                break;
+            }
+        }
+
+        if let Some(doc) = &app.doc_model {
+            assert!(!doc.paragraphs.is_empty(), "Parsed DOCX must have text paragraphs");
+            assert_eq!(doc.images.len(), 3, "Parsed DOCX must have 3 images (Diagram, Chart, Stamp)");
+        }
+    }
+
+    #[test]
+    fn test_xlsx_spreadsheet_model_loading() {
+        let mut app = StudioApp::new();
+        for path in [
+            "test_documents/dummy_budget.xlsx",
+            "../../test_documents/dummy_budget.xlsx",
+        ] {
+            if let Ok(bytes) = std::fs::read(path) {
+                app.load_xlsx_bytes(&bytes);
+                break;
+            }
+        }
+
+        let sheet_model = app.spreadsheet_model.as_ref().expect("Spreadsheet model must exist");
+        assert!(!sheet_model.sheet_names.is_empty());
+        assert!(!sheet_model.rows.is_empty());
     }
 
     #[test]
@@ -109,6 +148,11 @@ mod tests {
 
     #[test]
     fn test_korean_font_installation_and_glyph_coverage() {
+        let probe_chars = &['한', '글', '제', '안', '서', '문', '서', '표', '실', '측', '비', '교'];
+        let sys_font = wordcraft_fonts::system_cjk_ui_font_for(false, true, probe_chars);
+        println!(">>> sys_font: {:?}", sys_font.as_ref().map(|f| (f.bytes.len(), f.index)));
+        assert!(sys_font.is_some(), "system_cjk_ui_font_for must find a font");
+
         let ctx = egui::Context::default();
         theme::install_korean_fonts(&ctx);
 
@@ -123,6 +167,7 @@ mod tests {
         assert!(covered, "Korean system font must cover all sample Hangul glyphs (no tofu/boxes)");
 
         let text_w = ctx.fonts_mut(|fonts| fonts.layout_no_wrap(sample.to_string(), font_id, egui::Color32::WHITE)).size().x;
+        println!(">>> text_w: {}", text_w);
         assert!(text_w > 100.0, "Korean text layout must have non-zero measured width");
     }
 }

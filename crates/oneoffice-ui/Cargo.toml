@@ -14,6 +14,12 @@ oneoffice-diagram = { workspace = true }
 oneoffice-hwpx-core = { workspace = true }
 oneoffice-pdf = { workspace = true }
 wordcraft-fonts = { workspace = true }
+wordcraft-doc = { workspace = true }
+wordcraft-docx = { workspace = true }
+gridcraft-core = { workspace = true }
+gridcraft-model = { workspace = true }
+gridcraft-xlsx = { workspace = true }
+zip = { workspace = true }
 egui = { workspace = true }
 egui_extras = { workspace = true }
 image = { workspace = true }
