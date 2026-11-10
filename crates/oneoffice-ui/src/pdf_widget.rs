@@ -16,6 +16,7 @@ pub struct PdfViewerWidget {
     pub layer_stack: SignatureLayerStack,
     pub seal_label: String,
     pub status_message: String,
+    pub selected_sig_id: Option<String>,
 }
 
 impl PdfViewerWidget {
@@ -25,11 +26,21 @@ impl PdfViewerWidget {
         Self {
             session: None,
             current_page: 0,
-            zoom_scale: 1.5,
+            zoom_scale: 1.0,
             page_texture: None,
             layer_stack: SignatureLayerStack::default(),
             seal_label: "대표이사\n원오피스".to_string(),
             status_message: "PDF 문서를 불러와 주십시오.".to_string(),
+            selected_sig_id: None,
+        }
+    }
+
+    /// Automatically loads a clean-room sample contract if no PDF is currently loaded.
+    pub fn ensure_sample_loaded(&mut self, ctx: &egui::Context) {
+        if self.session.is_none()
+            && let Ok(sample_bytes) = oneoffice_pdf::generate_sample_korean_contract_pdf()
+        {
+            let _ = self.load_pdf_bytes(ctx, &sample_bytes);
         }
     }
 
@@ -108,12 +119,15 @@ impl PdfViewerWidget {
 
     /// Renders the PDF viewer UI and signature toolbar.
     pub fn show(&mut self, ui: &mut Ui, ctx: &egui::Context) {
+        self.ensure_sample_loaded(ctx);
+
         // Toolbar
         ui.horizontal(|ui| {
             if let Some(session) = &self.session {
                 let total = session.page_count();
                 if ui.button("◀ 이전").clicked() && self.current_page > 0 {
                     self.current_page -= 1;
+                    self.selected_sig_id = None;
                     self.refresh_page_texture(ctx);
                 }
 
@@ -121,6 +135,7 @@ impl PdfViewerWidget {
 
                 if ui.button("다음 ▶").clicked() && self.current_page + 1 < total {
                     self.current_page += 1;
+                    self.selected_sig_id = None;
                     self.refresh_page_texture(ctx);
                 }
             }
@@ -128,17 +143,21 @@ impl PdfViewerWidget {
             ui.separator();
 
             // Zoom controls
-            if ui.button("➖ 축소").clicked() && self.zoom_scale > 0.75 {
+            if ui.button("➖ 축소").clicked() && self.zoom_scale > 0.5 {
                 self.zoom_scale -= 0.25;
                 self.refresh_page_texture(ctx);
             }
-            ui.label(format!("{:.0}%", self.zoom_scale * 100.0 / 1.5));
-            if ui.button("➕ 확대").clicked() && self.zoom_scale < 3.0 {
+            ui.label(format!("{:.0}%", self.zoom_scale * 100.0));
+            if ui.button("➕ 확대").clicked() && self.zoom_scale < 2.5 {
                 self.zoom_scale += 0.25;
                 self.refresh_page_texture(ctx);
             }
 
             ui.separator();
+
+            // Seal Label Customizer
+            ui.label("직인 문구:");
+            ui.add(egui::TextEdit::singleline(&mut self.seal_label).desired_width(100.0));
 
             // Seal stamping actions
             if ui.button("🔴 (인) 앵커 자동 날인").clicked()
@@ -147,7 +166,14 @@ impl PdfViewerWidget {
                 self.status_message = e;
             }
 
-            if self.layer_stack.can_undo() && ui.button("↩ 서명 취소").clicked() {
+            // Delete selected signature button
+            if let Some(sel_id) = &self.selected_sig_id.clone() {
+                if ui.button("🗑️ 선택 서명 삭제").clicked() {
+                    let _ = self.layer_stack.remove_signature(sel_id);
+                    self.selected_sig_id = None;
+                    self.status_message = "선택된 서명을 삭제했습니다.".to_string();
+                }
+            } else if self.layer_stack.can_undo() && ui.button("↩ 서명 취소").clicked() {
                 self.layer_stack.undo();
             }
 
@@ -161,34 +187,42 @@ impl PdfViewerWidget {
         ui.add_space(8.0);
 
         // PDF Page view area with signature overlay
-        if let Some(tex) = &self.page_texture {
-            let display_w = tex.size()[0] as f32 / (self.zoom_scale / 1.0);
-            let display_h = tex.size()[1] as f32 / (self.zoom_scale / 1.0);
+        if let Some(session) = &self.session {
+            let [page_w_pt, page_h_pt] = session
+                .page_dimensions_pt(self.current_page)
+                .unwrap_or([595.28, 841.89]);
+            let display_w = page_w_pt * self.zoom_scale;
+            let display_h = page_h_pt * self.zoom_scale;
 
             let (response, painter) =
                 ui.allocate_painter(Vec2::new(display_w, display_h), egui::Sense::click());
             let origin = response.rect.min;
 
             // Draw base PDF page
-            painter.image(
-                tex.id(),
-                response.rect,
-                Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
-                Color32::WHITE,
-            );
+            if let Some(tex) = &self.page_texture {
+                painter.image(
+                    tex.id(),
+                    response.rect,
+                    Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)),
+                    Color32::WHITE,
+                );
+            }
 
             // Draw placed signatures on this page
+            let mut clicked_sig_id = None;
             for sig in self.layer_stack.signatures() {
                 if sig.page_index == self.current_page {
                     let [rx, ry, rw, rh] = sig.rect_pt;
                     let sig_rect = Rect::from_min_size(
-                        Pos2::new(origin.x + rx, origin.y + ry),
-                        Vec2::new(rw, rh),
+                        Pos2::new(origin.x + rx * self.zoom_scale, origin.y + ry * self.zoom_scale),
+                        Vec2::new(rw * self.zoom_scale, rh * self.zoom_scale),
                     );
+
+                    let is_selected = self.selected_sig_id.as_deref() == Some(&sig.id);
 
                     // Red seal indicator circle
                     let center = sig_rect.center();
-                    let radius = rw.min(rh) * 0.45;
+                    let radius = (rw.min(rh) * self.zoom_scale) * 0.45;
                     painter.circle_stroke(
                         center,
                         radius,
@@ -198,19 +232,42 @@ impl PdfViewerWidget {
                         center,
                         egui::Align2::CENTER_CENTER,
                         "印",
-                        egui::FontId::proportional(14.0),
+                        egui::FontId::proportional(14.0 * self.zoom_scale),
                         Color32::from_rgb(220, 38, 38),
                     );
+
+                    // Selection highlight box
+                    if is_selected {
+                        painter.rect_stroke(
+                            sig_rect.expand(4.0),
+                            4.0,
+                            Stroke::new(2.0, Color32::from_rgb(37, 99, 235)),
+                            egui::StrokeKind::Outside,
+                        );
+                    }
+
+                    if response.clicked()
+                        && let Some(pos) = response.interact_pointer_pos()
+                        && sig_rect.contains(pos)
+                    {
+                        clicked_sig_id = Some(sig.id.clone());
+                    }
                 }
             }
 
-            // Click to place seal manually
+            // Handle click
             if response.clicked()
                 && let Some(pos) = response.interact_pointer_pos()
             {
-                let click_x = pos.x - origin.x - 24.0;
-                let click_y = pos.y - origin.y - 24.0;
-                let _ = self.stamp_seal_at(click_x, click_y);
+                if let Some(hit_id) = clicked_sig_id {
+                    self.selected_sig_id = Some(hit_id);
+                    self.status_message = "서명이 선택되었습니다. (삭제 가능)".to_string();
+                } else {
+                    self.selected_sig_id = None;
+                    let click_x = (pos.x - origin.x) / self.zoom_scale - 24.0;
+                    let click_y = (pos.y - origin.y) / self.zoom_scale - 24.0;
+                    let _ = self.stamp_seal_at(click_x, click_y);
+                }
             }
         }
     }

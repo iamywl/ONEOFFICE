@@ -68,4 +68,42 @@ mod tests {
             .expect("load signed pdf failed");
         assert_eq!(signed_session.page_count(), 1);
     }
+
+    #[test]
+    fn test_interactive_table_recalculation() {
+        let mut app = StudioApp::new();
+        // Initial B2 = 12500000, C2 = 4300000 -> D2 = 16800000
+        assert_eq!(app.table_data[1][3], "16800000");
+
+        // Mutate B2 to 20000000
+        app.table_data[1][1] = "20000000".to_string();
+        app.recalculate_table_sums();
+
+        // D2 should now be 20000000 + 4300000 = 24300000
+        assert_eq!(app.table_data[1][3], "24300000");
+        // B4 (total of B) should be 20000000 + 18200000 = 38200000
+        assert_eq!(app.table_data[3][1], "38200000");
+    }
+
+    #[test]
+    fn test_pdf_signature_selection_and_deletion() {
+        let mut widget = PdfViewerWidget::new();
+        let contract_pdf = oneoffice_pdf::generate_sample_korean_contract_pdf()
+            .expect("generate sample contract failed");
+        let session = oneoffice_pdf::PdfDocumentSession::load(&contract_pdf)
+            .expect("load pdf session failed");
+        widget.session = Some(session);
+
+        widget.stamp_seal_at(100.0, 200.0).expect("stamp failed");
+        assert_eq!(widget.layer_stack.signatures().len(), 1);
+        let sig_id = widget.layer_stack.signatures()[0].id.clone();
+
+        widget.selected_sig_id = Some(sig_id.clone());
+        widget.layer_stack.remove_signature(&sig_id).expect("remove failed");
+        assert_eq!(widget.layer_stack.signatures().len(), 0);
+
+        // Undo restores it
+        assert!(widget.layer_stack.undo());
+        assert_eq!(widget.layer_stack.signatures().len(), 1);
+    }
 }
