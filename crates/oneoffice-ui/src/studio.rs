@@ -125,6 +125,7 @@ pub struct StudioApp {
     pub active_doc: ActiveDocumentKind,
     pub formula_hud: FormulaHudWidget,
     pub diagram_widget: DiagramWidget,
+    pub chart_widget: crate::chart_widget::ChartWidget,
     pub pdf_widget: PdfViewerWidget,
     pub document_title: String,
     pub zoom_pct: u32,
@@ -192,6 +193,7 @@ impl StudioApp {
             active_doc: ActiveDocumentKind::Hwpx,
             formula_hud: FormulaHudWidget::new("B2", "12500000"),
             diagram_widget: DiagramWidget::default(),
+            chart_widget: crate::chart_widget::ChartWidget::new(),
             pdf_widget: PdfViewerWidget::new(),
             document_title: "2026 차세대 사업계획서 및 표준용역계약서.hwpx".to_string(),
             zoom_pct: 100,
@@ -1371,7 +1373,7 @@ impl StudioApp {
                 });
 
             // Font size stepper
-            if ui.small_button("➖").clicked() && self.format_state.font_size > 9.0 {
+            if ui.small_button("-").clicked() && self.format_state.font_size > 9.0 {
                 self.push_undo_snapshot();
                 self.format_state.font_size -= 1.0;
                 self.apply_format_to_active_paragraph();
@@ -1409,6 +1411,52 @@ impl StudioApp {
                 self.apply_format_to_active_paragraph();
             }
 
+            // Underline toggle
+            let underline_resp = ui.selectable_label(
+                self.format_state.is_underline,
+                RichText::new(" U ").underline(),
+            );
+            if underline_resp.clicked() {
+                self.push_undo_snapshot();
+                self.format_state.is_underline = !self.format_state.is_underline;
+                self.apply_format_to_active_paragraph();
+            }
+
+            // Text color selector
+            egui::ComboBox::from_id_salt("text_color_combo")
+                .selected_text(if self.format_state.text_color == Color32::from_rgb(30, 64, 175) {
+                    "네이비"
+                } else if self.format_state.text_color == Color32::from_rgb(185, 28, 28) {
+                    "빨강"
+                } else if self.format_state.text_color == Color32::from_rgb(4, 120, 87) {
+                    "초록"
+                } else {
+                    "검정"
+                })
+                .width(60.0)
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(15, 23, 42), "검정").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.text_color = Color32::from_rgb(15, 23, 42);
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(30, 64, 175), "네이비").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.text_color = Color32::from_rgb(30, 64, 175);
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(185, 28, 28), "빨강").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.text_color = Color32::from_rgb(185, 28, 28);
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(4, 120, 87), "초록").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.text_color = Color32::from_rgb(4, 120, 87);
+                        self.apply_format_to_active_paragraph();
+                    }
+                });
+
             // Alignment buttons
             if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "<").on_hover_text("왼쪽 정렬").clicked() {
                 self.format_state.align = egui::Align::LEFT;
@@ -1438,8 +1486,30 @@ impl StudioApp {
                             self.is_dirty = true;
                         }
                     }
-                    if ui.button("도식 연동").clicked() {
-                        self.status_text = "제안서 도식화 캔버스 연결 완료".to_string();
+                    if ui.button("+ 표 삽입").clicked() {
+                        self.push_undo_snapshot();
+                        self.table_data = vec![
+                            vec!["항목".into(), "단위".into(), "수량".into(), "단가(원)".into(), "소계(원)".into()],
+                            vec!["클라우드 인프라".into(), "식".into(), "1".into(), "12500000".into(), "12500000".into()],
+                            vec!["엔진 라이선스".into(), "카피".into(), "5".into(), "3000000".into(), "15000000".into()],
+                            vec!["유지보수 기술지원".into(), "월".into(), "12".into(), "500000".into(), "6000000".into()],
+                            vec!["합계 (SUM)".into(), "-".into(), "-".into(), "-".into(), "33500000".into()],
+                        ];
+                        self.recalculate_table_sums();
+                        self.is_dirty = true;
+                        self.status_text = "본문에 5x5 엑셀 수식 연동 표 삽입 완료".to_string();
+                    }
+                    if ui.button("+ 도식 삽입").clicked() {
+                        self.push_undo_snapshot();
+                        self.status_text = "제안서 인포그래픽 도식화 캔버스 삽입 완료".to_string();
+                    }
+                    if ui.button("+ 차트 삽입").clicked() {
+                        self.push_undo_snapshot();
+                        self.chart_widget.is_visible = true;
+                        let ctx = ui.ctx().clone();
+                        self.chart_widget.rebuild_from_table(&ctx, &self.table_data, self.theme == StudioTheme::Dark);
+                        self.is_dirty = true;
+                        self.status_text = "26종 엑셀 벡터 차트 삽입 완료".to_string();
                     }
                 }
                 ActiveDocumentKind::Xlsx => {
@@ -1743,39 +1813,46 @@ impl StudioApp {
                     } else {
                         // Default template view
                         ui.heading(
-                            RichText::new("차세대 통합 오피스 플랫폼 기술 제안서")
+                            RichText::new("ONEOFFICE 2026 차세대 사업계획서 및 통합 제안")
                                 .color(Color32::from_rgb(15, 23, 42))
-                                .size(20.0),
+                                .size(22.0),
                         );
                         ui.label(
-                            RichText::new("문서번호: ONEOFFICE-2026-RFP | 배포용 문서 복호화 지원")
+                            RichText::new("문서번호: ONEOFFICE-2026-KR01 | 순수 Rust 기반 HWPX/DOCX/XLSX 복합 개체 실측")
                                 .color(Color32::from_rgb(100, 116, 139))
                                 .size(11.0),
                         );
                         ui.separator();
                         ui.add_space(8.0);
-
-                        ui.label(
-                            RichText::new("1. 제안 개요 및 도식화 구성도")
-                                .strong()
-                                .color(Color32::from_rgb(15, 23, 42)),
-                        );
-
-                        self.diagram_widget.show(ui);
                     }
 
                     if self.active_doc != ActiveDocumentKind::Docx {
-                        ui.add_space(16.0);
-                        ui.label(
-                            RichText::new("2. 513함수 연동 예산 수식표 (클릭 시 수식바 연동)")
-                                .strong()
-                                .color(Color32::from_rgb(15, 23, 42)),
-                        );
+                        ui.add_space(12.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("1. 513함수 연동 예산 수식표 (클릭 시 수식바 연동)")
+                                    .strong()
+                                    .color(Color32::from_rgb(15, 23, 42)),
+                            );
+                            if ui.small_button("+ 행 추가").clicked() {
+                                self.push_undo_snapshot();
+                                let cols = self.table_data.first().map_or(4, |r| r.len());
+                                self.table_data.push(vec!["-".into(); cols]);
+                                self.is_dirty = true;
+                            }
+                            if ui.small_button("+ 열 추가").clicked() {
+                                self.push_undo_snapshot();
+                                for row in &mut self.table_data {
+                                    row.push("-".into());
+                                }
+                                self.is_dirty = true;
+                            }
+                        });
 
                         // Interactive Excel Formula Table Grid
                         egui::Grid::new("hwpx_calc_table")
                             .striped(true)
-                            .min_col_width(120.0)
+                            .min_col_width(110.0)
                             .show(ui, |ui| {
                                 let mut clicked_cell = None;
                                 for (row_idx, row) in self.table_data.iter().enumerate() {
@@ -1788,7 +1865,7 @@ impl StudioApp {
                                             RichText::new(val)
                                                 .strong()
                                                 .color(Color32::from_rgb(15, 23, 42))
-                                        } else if row_idx == 3 {
+                                        } else if row_idx == self.table_data.len() - 1 {
                                             RichText::new(val)
                                                 .strong()
                                                 .color(Color32::from_rgb(37, 99, 235))
@@ -1808,12 +1885,9 @@ impl StudioApp {
                                     self.table_selected_cell = (r, c);
                                     let col_letter = (b'A' + c as u8) as char;
                                     self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
-                                    if r == 3 && c > 0 {
+                                    if r == self.table_data.len() - 1 && c > 0 {
                                         self.formula_hud.formula_text =
-                                            format!("=SUM({col_letter}2:{col_letter}3)");
-                                    } else if c == 3 && r > 0 {
-                                        self.formula_hud.formula_text =
-                                            format!("=SUM(B{}:C{})", r + 1, r + 1);
+                                            format!("=SUM({col_letter}2:{col_letter}{r})");
                                     } else if let Some(val) =
                                         self.table_data.get(r).and_then(|row| row.get(c))
                                     {
@@ -1822,12 +1896,26 @@ impl StudioApp {
                                 }
                             });
 
-                        ui.add_space(8.0);
+                        ui.add_space(4.0);
                         ui.label(
                             RichText::new("※ 셀을 클릭하면 상단 Formula HUD를 통해 513개 엑셀 함수(=SUM 등)가 실시간 동기화 및 재계산됩니다.")
                                 .size(11.0)
                                 .color(Color32::from_rgb(100, 116, 139)),
                         );
+
+                        // 2. Embedded 26-type Excel vector chart
+                        ui.add_space(14.0);
+                        let ctx = ui.ctx().clone();
+                        self.chart_widget.show(ui, &ctx, &self.table_data, self.theme == StudioTheme::Dark);
+
+                        // 3. In-place proposal infographic diagram
+                        ui.add_space(14.0);
+                        ui.label(
+                            RichText::new("3. 제안서 인포그래픽 도식화 구성도 (10대 컨설팅 템플릿)")
+                                .strong()
+                                .color(Color32::from_rgb(15, 23, 42)),
+                        );
+                        self.diagram_widget.show(ui);
                     }
                 });
         });

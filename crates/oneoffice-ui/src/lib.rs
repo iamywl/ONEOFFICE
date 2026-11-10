@@ -10,12 +10,14 @@
     clippy::unreachable
 )]
 
+pub mod chart_widget;
 pub mod diagram_widget;
 pub mod formula_hud;
 pub mod pdf_widget;
 pub mod studio;
 pub mod theme;
 
+pub use chart_widget::ChartWidget;
 pub use diagram_widget::DiagramWidget;
 pub use formula_hud::{FormulaHudEvent, FormulaHudWidget};
 pub use pdf_widget::PdfViewerWidget;

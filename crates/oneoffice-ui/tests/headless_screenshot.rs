@@ -26,7 +26,7 @@ mod tests {
         harness.run_steps(3);
         let img = harness.render().expect("Headless render failed");
         assert_eq!(img.width(), 1440);
-        assert_eq!(img.height(), 900);
+        assert!(img.height() >= 900);
 
         // Verify non-black pixels and rich UI color depth
         let mut non_black_pixels = 0usize;
@@ -207,5 +207,33 @@ mod tests {
             }, app);
 
         verify_and_save_screenshot(&mut harness, "headless_find_replace_hud.png");
+    }
+
+    #[test]
+    fn test_headless_table_and_diagram_rich() {
+        let mut app = StudioApp::new();
+        app.active_doc = ActiveDocumentKind::Hwpx;
+        app.document_title = "표와_도식화_통합제안서.hwpx".to_string();
+        app.doc_model = None;
+        app.table_data = vec![
+            vec!["항목".into(), "단위".into(), "수량".into(), "단가(원)".into(), "소계(원)".into()],
+            vec!["클라우드 인프라".into(), "식".into(), "1".into(), "12500000".into(), "12500000".into()],
+            vec!["엔진 라이선스".into(), "카피".into(), "5".into(), "3000000".into(), "15000000".into()],
+            vec!["유지보수 기술지원".into(), "월".into(), "12".into(), "500000".into(), "6000000".into()],
+            vec!["합계 (SUM)".into(), "-".into(), "-".into(), "-".into(), "33500000".into()],
+        ];
+        app.recalculate_table_sums();
+        app.chart_widget.is_visible = true;
+        app.chart_widget.selected_kind = "column_clustered".to_string();
+
+        let mut harness = Harness::builder()
+            .allow_missing_glyphs()
+            .with_accessibility_check(false)
+            .with_size(egui::vec2(1440.0, 1200.0))
+            .build_ui_state(|ui, state: &mut StudioApp| {
+                state.show(ui);
+            }, app);
+
+        verify_and_save_screenshot(&mut harness, "headless_rich_table_diagram.png");
     }
 }

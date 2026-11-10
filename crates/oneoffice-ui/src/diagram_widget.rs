@@ -44,7 +44,7 @@ impl DiagramWidget {
     /// Renders the diagram template bar and interactive preview canvas.
     pub fn show(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
-            ui.label(egui::RichText::new("📊 제안서 도식 템플릿:").strong());
+            ui.label(egui::RichText::new("제안서 도식 템플릿:").strong());
 
             let templates = list_diagram_templates();
             egui::ComboBox::from_id_salt("diagram_template_picker")
@@ -62,7 +62,7 @@ impl DiagramWidget {
                     }
                 });
 
-            if ui.button("🔄 레이아웃 재해석").clicked() {
+            if ui.button("레이아웃 재해석").clicked() {
                 self.last_scene = solve_layout(&self.spec).ok();
             }
 
@@ -70,14 +70,14 @@ impl DiagramWidget {
                 let diag = &scene.diagnostics;
                 if diag.overflow_count == 0 && diag.collision_count == 0 {
                     ui.label(
-                        egui::RichText::new("✔ 글자 잘림 0건 (완벽 정렬)")
+                        egui::RichText::new("글자 잘림 0건 (완벽 정렬)")
                             .color(Color32::from_rgb(16, 185, 129))
                             .size(11.0),
                     );
                 } else {
                     ui.label(
                         egui::RichText::new(format!(
-                            "⚠ 오버플로우: {}건, 충돌: {}건",
+                            "! 오버플로우: {}건, 충돌: {}건",
                             diag.overflow_count, diag.collision_count
                         ))
                         .color(Color32::from_rgb(245, 158, 11))
