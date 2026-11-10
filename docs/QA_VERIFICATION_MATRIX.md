@@ -32,6 +32,9 @@
 | **F-17** | Real Multi-Doc UI | DOCX/XLSX/PPTX/PDF 실제 파일 파싱 렌더링 및 엑셀 그리드·슬라이드 덱 스튜디오 실체화 | `✅ Verified` | Wave 2: Track E | `test_docx_parsing_and_embedded_images` & `test_xlsx_spreadsheet_model_loading` |
 | **F-18** | In-Place WYSIWYG | DOCX/HWPX/XLSX/PDF 인플레이스 위지윅 텍스트 편집, 셀 더블클릭 인라인 편집, 리본 툴바 서식, 무손실 저장(`Ctrl+S`) | `✅ Verified` | Wave 2: Track E | `test_document_save_and_dirty_flag` & `test_in_place_paragraph_formatting` |
 | **F-19** | PPTX In-Place Deck | PPTX 슬라이드 덱 제목·불릿 인플레이스 편집, 불릿/슬라이드 추가·삭제, ECMA-376 PresentationML 패키징 및 무손실 저장 | `✅ Verified` | Wave 2: Track E | `test_pptx_in_place_editing_and_save_roundtrip` & `build_pptx_package` |
+| **F-20** | Undo/Redo Engine | 다단계 실행 취소(`Ctrl+Z`) 및 다시 실행(`Ctrl+Y`/`Ctrl+Shift+Z`) 스냅샷 히스토리 파이프라인 | `✅ Verified` | Wave 2: Track E | `test_undo_redo_pipeline` & `push_undo_snapshot` |
+| **F-21** | Find & Replace | 대화형 찾기(`Ctrl+F`) 및 일괄 바꾸기(`Ctrl+H`) 글래스 HUD (문서·시트·슬라이드 전수 검색) | `✅ Verified` | Wave 2: Track E | `test_find_and_replace_pipeline` & `perform_replace_all` |
+| **F-22** | Direct PDF Export | DOCX/HWPX/XLSX/PPTX 임의 문서를 벡터 PDF로 즉시 컴파일 후 전자서명 뷰어로 직결 변환 | `✅ Verified` | Wave 1-2: Track D/E | `test_generate_document_pdf_export` & `test_export_document_to_pdf` |
 
 ---
 

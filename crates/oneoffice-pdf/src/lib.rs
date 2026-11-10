@@ -37,7 +37,7 @@ pub use signature::{
 };
 pub use viewer::{
     A4_HEIGHT_PT, A4_WIDTH_PT, PdfDocumentSession, TextAnchor,
-    generate_sample_korean_contract_pdf,
+    generate_document_pdf, generate_sample_korean_contract_pdf,
 };
 pub use writer::save_pdf_with_signatures;
 
@@ -192,5 +192,27 @@ mod tests {
             .render_page_png(0, 1.5)
             .expect("render signed page failed");
         assert!(!signed_png.is_empty());
+    }
+
+    #[test]
+    fn test_generate_document_pdf_export() {
+        let paragraphs = vec![
+            "1. 차세대 올인원 오피스 플랫폼 기술 개요 및 도입 목적 기술.".to_string(),
+            "2. 순수 Rust 기반 HWPX, DOCX, XLSX, PPTX, PDF 통합 지원 체계 구축.".to_string(),
+            "3. 전자서명 및 직인 날인 검증 앵커가 포함된 표준 규격 보고서.".to_string(),
+        ];
+        let pdf_bytes = generate_document_pdf(
+            "ONEOFFICE 사업수행계획서",
+            "문서번호: ONEOFFICE-2026-PLAN | 최종 승인본",
+            &paragraphs,
+        )
+        .expect("generate document pdf must succeed");
+
+        assert!(pdf_bytes.len() > 1000);
+        let session = PdfDocumentSession::load(&pdf_bytes).expect("session load must succeed");
+        assert_eq!(session.page_count(), 1);
+
+        let anchors = session.find_signature_anchors(0).expect("anchors search");
+        assert!(!anchors.is_empty(), "Exported PDF must have signature anchor (인)");
     }
 }

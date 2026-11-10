@@ -102,6 +102,23 @@ impl Default for TextFormatState {
     }
 }
 
+/// Snapshot of a document for multi-level Undo/Redo history.
+#[derive(Clone, Debug)]
+pub enum DocumentSnapshot {
+    Doc(LoadedDocument),
+    Spreadsheet(Vec<Vec<String>>),
+    Presentation(LoadedPresentation),
+}
+
+/// Find and Replace state for interactive document search and text substitution.
+#[derive(Clone, Debug, Default)]
+pub struct FindReplaceState {
+    pub is_open: bool,
+    pub find_query: String,
+    pub replace_query: String,
+    pub status: String,
+}
+
 /// Unified ONEOFFICE Studio application state.
 pub struct StudioApp {
     pub theme: StudioTheme,
@@ -128,6 +145,9 @@ pub struct StudioApp {
     pub is_dirty: bool,
     pub request_open_file: bool,
     pub request_save_as: bool,
+    pub undo_stack: Vec<DocumentSnapshot>,
+    pub redo_stack: Vec<DocumentSnapshot>,
+    pub find_replace: FindReplaceState,
 }
 
 impl Default for StudioApp {
@@ -196,6 +216,9 @@ impl StudioApp {
             is_dirty: false,
             request_open_file: false,
             request_save_as: false,
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
+            find_replace: FindReplaceState::default(),
         };
 
         // Initialize default presentation model
@@ -298,15 +321,402 @@ impl StudioApp {
         }
     }
 
+    /// Pushes a snapshot of the active document state to the undo history stack.
+    pub fn push_undo_snapshot(&mut self) {
+        let snapshot = match self.active_doc {
+            ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
+                self.doc_model.as_ref().map(|d| DocumentSnapshot::Doc(d.clone()))
+            }
+            ActiveDocumentKind::Xlsx => {
+                Some(DocumentSnapshot::Spreadsheet(self.table_data.clone()))
+            }
+            ActiveDocumentKind::Pptx => {
+                self.presentation_model.as_ref().map(|p| DocumentSnapshot::Presentation(p.clone()))
+            }
+            ActiveDocumentKind::Pdf => None,
+        };
+
+        if let Some(snap) = snapshot {
+            if self.undo_stack.len() >= 50 {
+                self.undo_stack.remove(0);
+            }
+            self.undo_stack.push(snap);
+            self.redo_stack.clear();
+        }
+    }
+
+    /// Undoes the last operation and restores previous document state.
+    pub fn undo(&mut self) {
+        if let Some(prev) = self.undo_stack.pop() {
+            let current = match &prev {
+                DocumentSnapshot::Doc(_) => {
+                    self.doc_model.as_ref().map(|d| DocumentSnapshot::Doc(d.clone()))
+                }
+                DocumentSnapshot::Spreadsheet(_) => {
+                    Some(DocumentSnapshot::Spreadsheet(self.table_data.clone()))
+                }
+                DocumentSnapshot::Presentation(_) => {
+                    self.presentation_model.as_ref().map(|p| DocumentSnapshot::Presentation(p.clone()))
+                }
+            };
+            if let Some(c) = current {
+                self.redo_stack.push(c);
+            }
+
+            match prev {
+                DocumentSnapshot::Doc(d) => self.doc_model = Some(d),
+                DocumentSnapshot::Spreadsheet(t) => {
+                    self.table_data = t;
+                    self.recalculate_table_sums();
+                }
+                DocumentSnapshot::Presentation(p) => self.presentation_model = Some(p),
+            }
+            self.is_dirty = true;
+            self.status_text = "↩ 실행 취소 완료".to_string();
+        }
+    }
+
+    /// Redoes the previously undone operation.
+    pub fn redo(&mut self) {
+        if let Some(next) = self.redo_stack.pop() {
+            let current = match &next {
+                DocumentSnapshot::Doc(_) => {
+                    self.doc_model.as_ref().map(|d| DocumentSnapshot::Doc(d.clone()))
+                }
+                DocumentSnapshot::Spreadsheet(_) => {
+                    Some(DocumentSnapshot::Spreadsheet(self.table_data.clone()))
+                }
+                DocumentSnapshot::Presentation(_) => {
+                    self.presentation_model.as_ref().map(|p| DocumentSnapshot::Presentation(p.clone()))
+                }
+            };
+            if let Some(c) = current {
+                self.undo_stack.push(c);
+            }
+
+            match next {
+                DocumentSnapshot::Doc(d) => self.doc_model = Some(d),
+                DocumentSnapshot::Spreadsheet(t) => {
+                    self.table_data = t;
+                    self.recalculate_table_sums();
+                }
+                DocumentSnapshot::Presentation(p) => self.presentation_model = Some(p),
+            }
+            self.is_dirty = true;
+            self.status_text = "↪ 다시 실행 완료".to_string();
+        }
+    }
+
+    /// Finds the next occurrence of `find_query` across the active document.
+    pub fn perform_find_next(&mut self) {
+        let q = self.find_replace.find_query.trim().to_string();
+        if q.is_empty() {
+            self.find_replace.status = "검색어를 입력해 주십시오.".to_string();
+            return;
+        }
+
+        match self.active_doc {
+            ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
+                if let Some(doc) = &self.doc_model {
+                    let start_idx = self.active_paragraph_idx.map_or(0, |i| i + 1);
+                    let mut found = None;
+                    for i in 0..doc.paragraphs.len() {
+                        let idx = (start_idx + i) % doc.paragraphs.len();
+                        if doc.paragraphs[idx].text.contains(&q) {
+                            found = Some(idx);
+                            break;
+                        }
+                    }
+                    if let Some(idx) = found {
+                        self.active_paragraph_idx = Some(idx);
+                        self.find_replace.status = format!("단락 {}에서 일치 항목을 찾았습니다.", idx + 1);
+                    } else {
+                        self.find_replace.status = format!("'{q}' 검색 결과가 없습니다.");
+                    }
+                }
+            }
+            ActiveDocumentKind::Xlsx => {
+                let mut found = None;
+                let (cur_r, cur_c) = self.table_selected_cell;
+                for r in 0..self.table_data.len() {
+                    for c in 0..self.table_data[r].len() {
+                        if (r > cur_r || (r == cur_r && c > cur_c)) && self.table_data[r][c].contains(&q) {
+                            found = Some((r, c));
+                            break;
+                        }
+                    }
+                    if found.is_some() {
+                        break;
+                    }
+                }
+                if found.is_none() {
+                    for r in 0..self.table_data.len() {
+                        for c in 0..self.table_data[r].len() {
+                            if self.table_data[r][c].contains(&q) {
+                                found = Some((r, c));
+                                break;
+                            }
+                        }
+                        if found.is_some() {
+                            break;
+                        }
+                    }
+                }
+                if let Some((r, c)) = found {
+                    self.table_selected_cell = (r, c);
+                    let col_letter = (b'A' + c as u8) as char;
+                    self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
+                    self.find_replace.status = format!("셀 {col_letter}{}에서 일치 항목을 찾았습니다.", r + 1);
+                } else {
+                    self.find_replace.status = format!("'{q}' 검색 결과가 없습니다.");
+                }
+            }
+            ActiveDocumentKind::Pptx => {
+                if let Some(pres) = &self.presentation_model {
+                    let mut found = None;
+                    let start = (pres.active_slide_index + 1) % pres.slides.len().max(1);
+                    for i in 0..pres.slides.len() {
+                        let idx = (start + i) % pres.slides.len();
+                        let s = &pres.slides[idx];
+                        if s.title.contains(&q) || s.bullet_points.iter().any(|b| b.contains(&q)) {
+                            found = Some(idx);
+                            break;
+                        }
+                    }
+                    if let Some(idx) = found {
+                        if let Some(p) = &mut self.presentation_model {
+                            p.active_slide_index = idx;
+                        }
+                        self.find_replace.status = format!("슬라이드 {}에서 일치 항목을 찾았습니다.", idx + 1);
+                    } else {
+                        self.find_replace.status = format!("'{q}' 검색 결과가 없습니다.");
+                    }
+                }
+            }
+            ActiveDocumentKind::Pdf => {
+                self.find_replace.status = "PDF 상단 툴바의 검색 HUD를 이용해 주십시오.".to_string();
+            }
+        }
+    }
+
+    /// Replaces the next occurrence of `find_query` with `replace_query`.
+    pub fn perform_replace_next(&mut self) {
+        let q = self.find_replace.find_query.trim().to_string();
+        let r_str = self.find_replace.replace_query.clone();
+        if q.is_empty() {
+            return;
+        }
+
+        match self.active_doc {
+            ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
+                if let Some(doc) = &mut self.doc_model {
+                    let mut replaced = false;
+                    let target_idx = self.active_paragraph_idx.unwrap_or(0);
+                    if let Some(para) = doc.paragraphs.get_mut(target_idx)
+                        && para.text.contains(&q)
+                    {
+                        para.text = para.text.replacen(&q, &r_str, 1);
+                        replaced = true;
+                    }
+                    if !replaced {
+                        for (idx, para) in doc.paragraphs.iter_mut().enumerate() {
+                            if para.text.contains(&q) {
+                                para.text = para.text.replacen(&q, &r_str, 1);
+                                self.active_paragraph_idx = Some(idx);
+                                replaced = true;
+                                break;
+                            }
+                        }
+                    }
+                    if replaced {
+                        self.is_dirty = true;
+                        self.find_replace.status = "1개 항목을 치환했습니다.".to_string();
+                    } else {
+                        self.find_replace.status = format!("'{q}' 검색 결과가 없습니다.");
+                    }
+                }
+            }
+            ActiveDocumentKind::Xlsx => {
+                let (r, c) = self.table_selected_cell;
+                if let Some(row) = self.table_data.get_mut(r)
+                    && let Some(cell) = row.get_mut(c)
+                    && cell.contains(&q)
+                {
+                    *cell = cell.replacen(&q, &r_str, 1);
+                    self.recalculate_table_sums();
+                    self.is_dirty = true;
+                    self.find_replace.status = "셀 내용을 치환했습니다.".to_string();
+                } else {
+                    self.perform_find_next();
+                }
+            }
+            ActiveDocumentKind::Pptx => {
+                if let Some(pres) = &mut self.presentation_model {
+                    let idx = pres.active_slide_index;
+                    if let Some(slide) = pres.slides.get_mut(idx) {
+                        let mut replaced = false;
+                        if slide.title.contains(&q) {
+                            slide.title = slide.title.replacen(&q, &r_str, 1);
+                            replaced = true;
+                        } else {
+                            for b in &mut slide.bullet_points {
+                                if b.contains(&q) {
+                                    *b = b.replacen(&q, &r_str, 1);
+                                    replaced = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if replaced {
+                            self.is_dirty = true;
+                            self.find_replace.status = "슬라이드 항목을 치환했습니다.".to_string();
+                        } else {
+                            self.perform_find_next();
+                        }
+                    }
+                }
+            }
+            ActiveDocumentKind::Pdf => {}
+        }
+    }
+
+    /// Replaces all occurrences of `find_query` with `replace_query` across the active document.
+    pub fn perform_replace_all(&mut self) {
+        let q = self.find_replace.find_query.trim().to_string();
+        let r_str = self.find_replace.replace_query.clone();
+        if q.is_empty() {
+            return;
+        }
+
+        let mut count = 0;
+        match self.active_doc {
+            ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
+                if let Some(doc) = &mut self.doc_model {
+                    for para in &mut doc.paragraphs {
+                        let matches = para.text.matches(&q).count();
+                        if matches > 0 {
+                            count += matches;
+                            para.text = para.text.replace(&q, &r_str);
+                        }
+                    }
+                    if doc.title.contains(&q) {
+                        count += doc.title.matches(&q).count();
+                        doc.title = doc.title.replace(&q, &r_str);
+                    }
+                }
+            }
+            ActiveDocumentKind::Xlsx => {
+                for row in &mut self.table_data {
+                    for cell in row {
+                        let matches = cell.matches(&q).count();
+                        if matches > 0 {
+                            count += matches;
+                            *cell = cell.replace(&q, &r_str);
+                        }
+                    }
+                }
+                self.recalculate_table_sums();
+            }
+            ActiveDocumentKind::Pptx => {
+                if let Some(pres) = &mut self.presentation_model {
+                    for slide in &mut pres.slides {
+                        if slide.title.contains(&q) {
+                            count += slide.title.matches(&q).count();
+                            slide.title = slide.title.replace(&q, &r_str);
+                        }
+                        for b in &mut slide.bullet_points {
+                            if b.contains(&q) {
+                                count += b.matches(&q).count();
+                                *b = b.replace(&q, &r_str);
+                            }
+                        }
+                    }
+                }
+            }
+            ActiveDocumentKind::Pdf => {}
+        }
+
+        if count > 0 {
+            self.is_dirty = true;
+            self.find_replace.status = format!("총 {count}개 항목을 모두 바꾸기 완료했습니다.");
+        } else {
+            self.find_replace.status = format!("'{q}' 검색 결과가 없습니다.");
+        }
+    }
+
+    /// Exports the active document (DOCX, HWPX, XLSX, or PPTX) to vector PDF and loads it into the PDF viewer.
+    pub fn export_current_document_to_pdf(&mut self, ctx: &egui::Context) -> Result<Vec<u8>, String> {
+        let (title, subtitle, paragraphs) = match self.active_doc {
+            ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
+                let doc = self.doc_model.as_ref().ok_or("문서 모델이 없습니다.")?;
+                let paras: Vec<String> = doc.paragraphs.iter().map(|p| p.text.clone()).collect();
+                (doc.title.clone(), doc.subtitle.clone(), paras)
+            }
+            ActiveDocumentKind::Xlsx => {
+                let mut paras = Vec::new();
+                for (idx, row) in self.table_data.iter().enumerate() {
+                    let line = row.join("  |  ");
+                    paras.push(format!("행 {}: {}", idx + 1, line));
+                }
+                (self.document_title.clone(), "스프레드시트 요약 보고서".to_string(), paras)
+            }
+            ActiveDocumentKind::Pptx => {
+                let pres = self.presentation_model.as_ref().ok_or("프레젠테이션 모델이 없습니다.")?;
+                let mut paras = Vec::new();
+                for slide in &pres.slides {
+                    paras.push(format!("슬라이드 {}: {}", slide.slide_number, slide.title));
+                    for b in &slide.bullet_points {
+                        paras.push(format!("  • {b}"));
+                    }
+                }
+                (pres.title.clone(), "프레젠테이션 슬라이드 덱 PDF 변환".to_string(), paras)
+            }
+            ActiveDocumentKind::Pdf => {
+                if let Some(session) = &self.pdf_widget.session {
+                    return Ok(session.raw_bytes().to_vec());
+                } else {
+                    return Err("PDF 세션이 없습니다.".to_string());
+                }
+            }
+        };
+
+        let pdf_bytes = oneoffice_pdf::generate_document_pdf(&title, &subtitle, &paragraphs)
+            .map_err(|e| format!("PDF 변환 실패: {e}"))?;
+
+        self.active_doc = ActiveDocumentKind::Pdf;
+        self.pdf_widget.load_pdf_bytes(ctx, &pdf_bytes)
+            .map_err(|e| format!("PDF 뷰어 로드 실패: {e}"))?;
+
+        self.status_text = format!("📤 PDF 내보내기 성공 ({} bytes): 전자서명 뷰어로 전환되었습니다.", pdf_bytes.len());
+        Ok(pdf_bytes)
+    }
+
     /// Renders the entire Frosted Glass studio interface into the target `Ui`.
     pub fn show(&mut self, ui: &mut Ui) {
+        let ctrl_or_cmd = ui.input(|i| i.modifiers.command || i.modifiers.ctrl);
+        let shift = ui.input(|i| i.modifiers.shift);
+
         // Handle Ctrl+S / Cmd+S for instant save
-        if ui.input(|i| (i.modifiers.command || i.modifiers.ctrl) && i.key_pressed(egui::Key::S)) {
+        if ctrl_or_cmd && ui.input(|i| i.key_pressed(egui::Key::S)) {
             let _ = self.save_current_document();
         }
         // Handle Ctrl+O / Cmd+O for open file
-        if ui.input(|i| (i.modifiers.command || i.modifiers.ctrl) && i.key_pressed(egui::Key::O)) {
+        if ctrl_or_cmd && ui.input(|i| i.key_pressed(egui::Key::O)) {
             self.request_open_file = true;
+        }
+        // Handle Ctrl+Z / Cmd+Z for undo, Ctrl+Shift+Z / Ctrl+Y for redo
+        if ctrl_or_cmd && ui.input(|i| i.key_pressed(egui::Key::Z)) {
+            if shift {
+                self.redo();
+            } else {
+                self.undo();
+            }
+        } else if ctrl_or_cmd && ui.input(|i| i.key_pressed(egui::Key::Y)) {
+            self.redo();
+        }
+        // Handle Ctrl+F / Ctrl+H for Find & Replace HUD
+        if ctrl_or_cmd && (ui.input(|i| i.key_pressed(egui::Key::F)) || ui.input(|i| i.key_pressed(egui::Key::H))) {
+            self.find_replace.is_open = true;
         }
 
         ui.vertical(|ui| {
@@ -318,7 +728,10 @@ impl StudioApp {
             self.show_ribbon_toolbar(ui);
             ui.separator();
 
-            // 3. Central Workspace Panel
+            // 3. Find & Replace Glass Bar (when active)
+            self.show_find_replace_bar(ui);
+
+            // 4. Central Workspace Panel
             egui::ScrollArea::both().show(ui, |ui| {
                 match self.active_doc {
                     ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
@@ -831,7 +1244,7 @@ impl StudioApp {
 
     fn show_ribbon_toolbar(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
-            // File quick actions
+            // 1. File quick actions
             if ui.button("📂 열기 (Ctrl+O)").clicked() {
                 self.request_open_file = true;
             }
@@ -849,13 +1262,76 @@ impl StudioApp {
                 self.request_save_as = true;
             }
 
+            if ui.button("📤 PDF 내보내기").clicked() {
+                let ctx = ui.ctx().clone();
+                let _ = self.export_current_document_to_pdf(&ctx);
+            }
+
             ui.separator();
 
-            // Font styling group
-            ui.label(RichText::new("글꼴:").size(11.0).color(Color32::GRAY));
+            // 2. Undo / Redo Group
+            let undo_btn = ui.add_enabled(!self.undo_stack.is_empty(), egui::Button::new("↩"));
+            if undo_btn.on_hover_text("실행 취소 (Ctrl+Z)").clicked() {
+                self.undo();
+            }
+
+            let redo_btn = ui.add_enabled(!self.redo_stack.is_empty(), egui::Button::new("↪"));
+            if redo_btn.on_hover_text("다시 실행 (Ctrl+Y)").clicked() {
+                self.redo();
+            }
+
+            // Find & Replace toggle
+            let find_btn = ui.selectable_label(self.find_replace.is_open, "🔍 찾기");
+            if find_btn.on_hover_text("찾기 및 바꾸기 (Ctrl+F / Ctrl+H)").clicked() {
+                self.find_replace.is_open = !self.find_replace.is_open;
+            }
+
+            ui.separator();
+
+            // 3. Paragraph Style & Font Styling Group
+            let current_style = if self.format_state.font_size >= 22.0 {
+                "제목 1"
+            } else if self.format_state.font_size >= 18.0 {
+                "제목 2"
+            } else if self.format_state.font_size >= 15.0 {
+                "소제목"
+            } else {
+                "본문"
+            };
+
+            egui::ComboBox::from_id_salt("para_style_combo")
+                .selected_text(current_style)
+                .width(70.0)
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(self.format_state.font_size == 22.0, "제목 1 (22pt)").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.font_size = 22.0;
+                        self.format_state.is_bold = true;
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.font_size == 18.0, "제목 2 (18pt)").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.font_size = 18.0;
+                        self.format_state.is_bold = true;
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.font_size == 15.0, "소제목 (15pt)").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.font_size = 15.0;
+                        self.format_state.is_bold = true;
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.font_size == 13.0, "본문 (13pt)").clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.font_size = 13.0;
+                        self.format_state.is_bold = false;
+                        self.apply_format_to_active_paragraph();
+                    }
+                });
 
             // Font size stepper
             if ui.small_button("➖").clicked() && self.format_state.font_size > 9.0 {
+                self.push_undo_snapshot();
                 self.format_state.font_size -= 1.0;
                 self.apply_format_to_active_paragraph();
             }
@@ -865,6 +1341,7 @@ impl StudioApp {
                     .size(12.0),
             );
             if ui.small_button("➕").clicked() && self.format_state.font_size < 36.0 {
+                self.push_undo_snapshot();
                 self.format_state.font_size += 1.0;
                 self.apply_format_to_active_paragraph();
             }
@@ -875,6 +1352,7 @@ impl StudioApp {
                 RichText::new(" B ").strong(),
             );
             if bold_resp.clicked() {
+                self.push_undo_snapshot();
                 self.format_state.is_bold = !self.format_state.is_bold;
                 self.apply_format_to_active_paragraph();
             }
@@ -885,26 +1363,39 @@ impl StudioApp {
                 RichText::new(" I ").italics(),
             );
             if italic_resp.clicked() {
+                self.push_undo_snapshot();
                 self.format_state.is_italic = !self.format_state.is_italic;
                 self.apply_format_to_active_paragraph();
             }
 
+            // Alignment buttons
+            if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "◀").on_hover_text("왼쪽 정렬").clicked() {
+                self.format_state.align = egui::Align::LEFT;
+            }
+            if ui.selectable_label(self.format_state.align == egui::Align::Center, "■").on_hover_text("가운데 정렬").clicked() {
+                self.format_state.align = egui::Align::Center;
+            }
+            if ui.selectable_label(self.format_state.align == egui::Align::RIGHT, "▶").on_hover_text("오른쪽 정렬").clicked() {
+                self.format_state.align = egui::Align::RIGHT;
+            }
+
             ui.separator();
 
-            // Insert / Actions
+            // 4. Insert / Actions
             match self.active_doc {
                 ActiveDocumentKind::Docx | ActiveDocumentKind::Hwpx => {
-                    if ui.button("➕ 새 문단 추가").clicked()
-                        && let Some(doc) = &mut self.doc_model
-                    {
-                        doc.paragraphs.push(DocParagraph {
-                            text: "새로운 제안 내용을 입력하십시오.".to_string(),
-                            is_heading: false,
-                            font_size: self.format_state.font_size,
-                            is_bold: self.format_state.is_bold,
-                        });
-                        self.active_paragraph_idx = Some(doc.paragraphs.len() - 1);
-                        self.is_dirty = true;
+                    if ui.button("➕ 새 문단").clicked() {
+                        self.push_undo_snapshot();
+                        if let Some(doc) = &mut self.doc_model {
+                            doc.paragraphs.push(DocParagraph {
+                                text: "새로운 제안 내용을 입력하십시오.".to_string(),
+                                is_heading: false,
+                                font_size: self.format_state.font_size,
+                                is_bold: self.format_state.is_bold,
+                            });
+                            self.active_paragraph_idx = Some(doc.paragraphs.len() - 1);
+                            self.is_dirty = true;
+                        }
                     }
                     if ui.button("📊 제안서 도식 연동").clicked() {
                         self.status_text = "제안서 도식화 캔버스 연결 완료".to_string();
@@ -912,11 +1403,13 @@ impl StudioApp {
                 }
                 ActiveDocumentKind::Xlsx => {
                     if ui.button("➕ 행 추가").clicked() {
+                        self.push_undo_snapshot();
                         let col_count = self.table_data.first().map_or(4, |r| r.len());
                         self.table_data.push(vec![String::new(); col_count]);
                         self.is_dirty = true;
                     }
                     if ui.button("➕ 열 추가").clicked() {
+                        self.push_undo_snapshot();
                         for row in &mut self.table_data {
                             row.push(String::new());
                         }
@@ -924,18 +1417,19 @@ impl StudioApp {
                     }
                 }
                 ActiveDocumentKind::Pptx => {
-                    if ui.button("➕ 새 슬라이드").clicked()
-                        && let Some(pres) = &mut self.presentation_model
-                    {
-                        let n = pres.slides.len() + 1;
-                        pres.slides.push(SlideItem {
-                            slide_number: n,
-                            title: format!("슬라이드 {n}: 주요 추진 전략"),
-                            bullet_points: vec!["핵심 가치 및 마일스톤 기술".to_string()],
-                            template_id: "problem-comparison-to-solution".to_string(),
-                        });
-                        pres.active_slide_index = n - 1;
-                        self.is_dirty = true;
+                    if ui.button("➕ 새 슬라이드").clicked() {
+                        self.push_undo_snapshot();
+                        if let Some(pres) = &mut self.presentation_model {
+                            let n = pres.slides.len() + 1;
+                            pres.slides.push(SlideItem {
+                                slide_number: n,
+                                title: format!("슬라이드 {n}: 주요 추진 전략"),
+                                bullet_points: vec!["핵심 가치 및 마일스톤 기술".to_string()],
+                                template_id: "problem-comparison-to-solution".to_string(),
+                            });
+                            pres.active_slide_index = n - 1;
+                            self.is_dirty = true;
+                        }
                     }
                 }
                 ActiveDocumentKind::Pdf => {
@@ -964,6 +1458,58 @@ impl StudioApp {
             });
         });
         ui.add_space(2.0);
+    }
+
+    fn show_find_replace_bar(&mut self, ui: &mut Ui) {
+        if !self.find_replace.is_open {
+            return;
+        }
+
+        ui.horizontal(|ui| {
+            ui.label(RichText::new("🔍 찾기:").strong().size(12.0));
+            let find_edit = egui::TextEdit::singleline(&mut self.find_replace.find_query)
+                .desired_width(120.0)
+                .hint_text("검색어 입력...");
+            let resp = ui.add(find_edit);
+            if resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                self.perform_find_next();
+            }
+
+            ui.label(RichText::new("바꾸기:").size(12.0));
+            let replace_edit = egui::TextEdit::singleline(&mut self.find_replace.replace_query)
+                .desired_width(120.0)
+                .hint_text("대체어 입력...");
+            ui.add(replace_edit);
+
+            if ui.button("다음 찾기").clicked() {
+                self.perform_find_next();
+            }
+
+            if ui.button("바꾸기").clicked() {
+                self.push_undo_snapshot();
+                self.perform_replace_next();
+            }
+
+            if ui.button("모두 바꾸기").clicked() {
+                self.push_undo_snapshot();
+                self.perform_replace_all();
+            }
+
+            if !self.find_replace.status.is_empty() {
+                ui.label(
+                    RichText::new(&self.find_replace.status)
+                        .size(11.0)
+                        .color(Color32::from_rgb(37, 99, 235)),
+                );
+            }
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui.small_button("✖").clicked() {
+                    self.find_replace.is_open = false;
+                }
+            });
+        });
+        ui.separator();
     }
 
     pub fn apply_format_to_active_paragraph(&mut self) {

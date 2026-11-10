@@ -346,3 +346,126 @@ pub fn generate_sample_korean_contract_pdf() -> Result<Vec<u8>, PdfError> {
     let pdf_bytes = writer.finish()?;
     Ok(pdf_bytes)
 }
+
+/// Exports any document structure into a standard vector A4 PDF with Korean typography and signature anchors.
+pub fn generate_document_pdf(
+    title: &str,
+    subtitle: &str,
+    paragraphs: &[String],
+) -> Result<Vec<u8>, PdfError> {
+    let mut meta = Metadata::default();
+    meta.title = Some(title.to_string());
+    meta.authors = vec!["ONEOFFICE Pure-Rust Engine".to_string()];
+    let mut writer = Writer::new(krilla::SerializeSettings::default(), meta);
+
+    let doc = writer.document_mut();
+    let font = resolve_krilla_font(title)?;
+
+    let page_settings = PageSettings::from_wh(A4_WIDTH_PT, A4_HEIGHT_PT)
+        .ok_or(PdfError::InvalidDimensions {
+            width: A4_WIDTH_PT as u32,
+            height: A4_HEIGHT_PT as u32,
+        })?;
+    let mut page = doc.start_page_with(page_settings);
+    let mut surface = page.surface();
+
+    // 1. Outer decorative border
+    let mut pb = PathBuilder::new();
+    pb.move_to(36.0, 36.0);
+    pb.line_to(A4_WIDTH_PT - 36.0, 36.0);
+    pb.line_to(A4_WIDTH_PT - 36.0, A4_HEIGHT_PT - 36.0);
+    pb.line_to(36.0, A4_HEIGHT_PT - 36.0);
+    pb.close();
+    if let Some(border_path) = pb.finish() {
+        surface.set_stroke(Some(Stroke {
+            paint: Paint::from(rgb::Color::new(15, 41, 66)),
+            width: 1.5,
+            ..Stroke::default()
+        }));
+        surface.draw_path(&border_path);
+        surface.set_stroke(None);
+    }
+
+    // 2. Title
+    surface.set_fill(Some(Fill {
+        paint: Paint::from(rgb::Color::new(15, 23, 42)),
+        rule: krilla::paint::FillRule::NonZero,
+        opacity: krilla::num::NormalizedF32::ONE,
+    }));
+    surface.draw_text(
+        KrillaPoint::from_xy(54.0, 80.0),
+        font.clone(),
+        20.0,
+        title,
+        false,
+        TextDirection::LeftToRight,
+    );
+
+    // 3. Subtitle / Metadata
+    if !subtitle.is_empty() {
+        surface.draw_text(
+            KrillaPoint::from_xy(54.0, 106.0),
+            font.clone(),
+            10.5,
+            subtitle,
+            false,
+            TextDirection::LeftToRight,
+        );
+    }
+
+    // Divider line
+    let mut div = PathBuilder::new();
+    div.move_to(54.0, 120.0);
+    div.line_to(A4_WIDTH_PT - 54.0, 120.0);
+    if let Some(div_path) = div.finish() {
+        surface.set_stroke(Some(Stroke {
+            paint: Paint::from(rgb::Color::new(203, 213, 225)),
+            width: 1.0,
+            ..Stroke::default()
+        }));
+        surface.draw_path(&div_path);
+        surface.set_stroke(None);
+    }
+
+    // 4. Paragraphs
+    let mut cur_y = 150.0f32;
+    for (idx, para) in paragraphs.iter().enumerate() {
+        if cur_y > A4_HEIGHT_PT - 120.0 {
+            break;
+        }
+        let font_sz = if idx == 0 && para.len() < 40 { 12.0 } else { 10.0 };
+        surface.draw_text(
+            KrillaPoint::from_xy(54.0, cur_y),
+            font.clone(),
+            font_sz,
+            para,
+            false,
+            TextDirection::LeftToRight,
+        );
+        cur_y += 28.0;
+    }
+
+    // 5. Signature section at bottom
+    surface.draw_text(
+        KrillaPoint::from_xy(54.0, A4_HEIGHT_PT - 70.0),
+        font.clone(),
+        11.0,
+        "작성 및 확인: ONEOFFICE 전자문서 검증센터",
+        false,
+        TextDirection::LeftToRight,
+    );
+    surface.draw_text(
+        KrillaPoint::from_xy(A4_WIDTH_PT - 180.0, A4_HEIGHT_PT - 70.0),
+        font,
+        11.0,
+        "확인자 기명날인    (인)",
+        false,
+        TextDirection::LeftToRight,
+    );
+
+    surface.finish();
+    page.finish();
+
+    let pdf_bytes = writer.finish()?;
+    Ok(pdf_bytes)
+}

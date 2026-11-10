@@ -156,6 +156,106 @@ mod tests {
     }
 
     #[test]
+    fn test_undo_redo_pipeline() {
+        let mut app = StudioApp::new();
+        let mut doc = studio::LoadedDocument::default();
+        doc.paragraphs.push(studio::DocParagraph {
+            text: "원본 단락 내용".to_string(),
+            is_heading: false,
+            font_size: 14.0,
+            is_bold: false,
+        });
+        app.doc_model = Some(doc);
+        app.active_doc = ActiveDocumentKind::Docx;
+        app.active_paragraph_idx = Some(0);
+
+        // 1. Snapshot before edit
+        app.push_undo_snapshot();
+        assert_eq!(app.undo_stack.len(), 1);
+
+        // 2. Modify paragraph
+        app.doc_model.as_mut().unwrap().paragraphs[0].text = "수정된 단락 내용".to_string();
+        app.doc_model.as_mut().unwrap().paragraphs[0].font_size = 22.0;
+        assert_eq!(app.doc_model.as_ref().unwrap().paragraphs[0].text, "수정된 단락 내용");
+
+        // 3. Undo
+        app.undo();
+        assert_eq!(app.doc_model.as_ref().unwrap().paragraphs[0].text, "원본 단락 내용");
+        assert_eq!(app.doc_model.as_ref().unwrap().paragraphs[0].font_size, 14.0);
+        assert_eq!(app.redo_stack.len(), 1);
+
+        // 4. Redo
+        app.redo();
+        assert_eq!(app.doc_model.as_ref().unwrap().paragraphs[0].text, "수정된 단락 내용");
+        assert_eq!(app.doc_model.as_ref().unwrap().paragraphs[0].font_size, 22.0);
+    }
+
+    #[test]
+    fn test_find_and_replace_pipeline() {
+        let mut app = StudioApp::new();
+        let mut doc = studio::LoadedDocument {
+            title: "ONEOFFICE 제안서 초안".to_string(),
+            ..Default::default()
+        };
+        doc.paragraphs.push(studio::DocParagraph {
+            text: "본 제안서는 차세대 오피스 기술을 설명합니다.".to_string(),
+            is_heading: false,
+            font_size: 14.0,
+            is_bold: false,
+        });
+        doc.paragraphs.push(studio::DocParagraph {
+            text: "두 번째 단락에서도 제안서 관련 요건을 다룹니다.".to_string(),
+            is_heading: false,
+            font_size: 14.0,
+            is_bold: false,
+        });
+        app.doc_model = Some(doc);
+        app.active_doc = ActiveDocumentKind::Docx;
+
+        // Perform find next
+        app.find_replace.find_query = "제안서".to_string();
+        app.perform_find_next();
+        assert_eq!(app.active_paragraph_idx, Some(0));
+
+        // Perform replace all
+        app.find_replace.replace_query = "보고서".to_string();
+        app.perform_replace_all();
+
+        let updated_doc = app.doc_model.as_ref().unwrap();
+        assert_eq!(updated_doc.title, "ONEOFFICE 보고서 초안");
+        assert_eq!(updated_doc.paragraphs[0].text, "본 보고서는 차세대 오피스 기술을 설명합니다.");
+        assert_eq!(updated_doc.paragraphs[1].text, "두 번째 단락에서도 보고서 관련 요건을 다룹니다.");
+    }
+
+    #[test]
+    fn test_export_document_to_pdf() {
+        let mut app = StudioApp::new();
+        let mut doc = studio::LoadedDocument {
+            title: "ONEOFFICE 기술 백서".to_string(),
+            subtitle: "클린룸 벡터 PDF 출력 실측 검증".to_string(),
+            ..Default::default()
+        };
+        doc.paragraphs.push(studio::DocParagraph {
+            text: "1. 순수 Rust 기반 문서 및 도식화 통합 엔진 구축 완료.".to_string(),
+            is_heading: false,
+            font_size: 14.0,
+            is_bold: false,
+        });
+        app.doc_model = Some(doc);
+        app.active_doc = ActiveDocumentKind::Docx;
+
+        let ctx = egui::Context::default();
+        let export_res = app.export_current_document_to_pdf(&ctx);
+        assert!(export_res.is_ok(), "Export to PDF must succeed: {:?}", export_res);
+        assert_eq!(app.active_doc, ActiveDocumentKind::Pdf);
+
+        let pdf_bytes = export_res.unwrap();
+        assert!(pdf_bytes.len() > 1000);
+        let session = oneoffice_pdf::PdfDocumentSession::load(&pdf_bytes).expect("session load");
+        assert_eq!(session.page_count(), 1);
+    }
+
+    #[test]
     fn test_formula_hud_function_lookup() {
         let hud = FormulaHudWidget::new("B2", "=AVERAGE(");
         assert_eq!(hud.cell_address, "B2");
