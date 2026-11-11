@@ -22,7 +22,7 @@
 | **F-07** | Diagram DSL | 제안서 시맨틱 도식화 엔진(`DiagramSpec`) + 한글 오버플로우 0% 솔버 | `✅ Verified` | Wave 1: Track B | 10종 컨설팅 템플릿 레이아웃 전수 통과 (`overflow == 0`) |
 | **F-08** | HWPX+Excel | HWPX/DOCX 내부 라이브 엑셀 수식 표 (`<hp:tbl>` + `.xlsx` 사이드카 + 수식 HUD) | `✅ Verified` | Wave 1: Track C / Wave 2 | `HwpxTableFormulaSidecar` SHA-256 staleness & `FormulaHudWidget` 513함수 연동 |
 | **F-09** | HWPX+PPT | HWPX/DOCX 내부 인라인 PPT 도식 서브캔버스 및 26종 차트 삽입 | `✅ Verified` | Wave 2: Track E | `DiagramWidget` 10종 템플릿 인플레이스 서브캔버스 & 26종 벡터 차트 연동 |
-| **F-10** | AI MCP | 통합 `oneoffice-mcp` (`diagram.compose`, `pdf.sign`, `visual.verify_page`) | `✅ Verified` | Wave 2: Track F | JSON-RPC 2.0 stdio + 5종 도구 + AI 폐루프 시각 자가검증 통과 |
+| **F-10** | AI MCP | 통합 `oneoffice-mcp` (7대 표준 도구: `doc.create`, `doc.inspect`, `diagram.compose`, `table.upsert`, `chart.upsert`, `pdf.sign`, `visual.verify_page`) | `✅ Verified` | Wave 2: Track F | JSON-RPC 2.0 stdio + 7대 표준 도구 + AI 폐루프 시각 자가검증 통과 |
 | **F-11** | VSC Ext | 올인원 `oneoffice-vscode` VSIX (`.hwpx`, `.docx`, `.xlsx`, `.pptx`, `.pdf`) | `✅ Verified` | Wave 3: Track G | 5종 Custom Editor 등록 + 7개 통합 커맨드 + 매니페스트 검증 |
 | **F-12** | 3-OS Native | `macOS`(`.app`), `Windows`(`.exe`/MSI), `Linux`(`AppImage`/`.deb`) 네이티브 | `✅ Verified` | Wave 3: Track G | `apps/oneoffice-desktop` eframe 실행기 + 드래그앤드롭 + 3대 OS CI 매트릭스 완료 |
 | **F-13** | Dummy Pipeline | 5대 포맷(`PDF`/`HWPX`/`XLSX`/`DOCX`/`PPTX`) 더미 문서 생성 및 2차 규격 검증 | `✅ Verified` | Wave 1-3 All | `scripts/qa/dummy-docs-pipeline.mjs` (5종 전수 바이트/구조 검증 통과) |
@@ -37,6 +37,7 @@
 | **F-22** | Direct PDF Export | DOCX/HWPX/XLSX/PPTX 임의 문서를 벡터 PDF로 즉시 컴파일 후 전자서명 뷰어로 직결 변환 | `✅ Verified` | Wave 1-2: Track D/E | `test_generate_document_pdf_export` & `test_export_document_to_pdf` |
 | **F-23** | Headless Offscreen Engine | 창 팝업 없는 순수 백그라운드 메모리 프레임버퍼 렌더러 (`egui_kittest` + `wgpu`) 기반 5대 포맷 100% 무결점 고해상도 PNG 캡처 | `✅ Verified` | Wave 3: Track G | `headless_screenshot.rs` (7종 실측 렌더링 0.16s 통과 & 126만 픽셀 검증) |
 | **F-24** | Parallel Heavy Stress | 1,000행 엑셀 수식·10회 HiDPI PDF 날인·50회 제안서 도식 컴파일·10회 DOCX/HWPX 패키징 병렬 스트레스 게이트 | `✅ Verified` | Wave 1-3 All | `stress_parallel_docs.rs` (4대 무거운 스레드 동시 완주 0.29s) |
+| **F-25** | In-Place Image Insertion | 인플레이스 고해상도 그림 자료(이미지) 삽입 및 DrawingML / OWPML BinData 패키징·삭제 HUD | `✅ Verified` | Wave 2: Track E | `test_in_place_insert_image` & `test_docx_save_with_table_and_image` |
 
 ---
 

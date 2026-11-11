@@ -67,12 +67,14 @@ mod tests {
         assert!(resp.error.is_none());
         let res = resp.result.unwrap();
         let tools = res["tools"].as_array().unwrap();
-        assert_eq!(tools.len(), 5);
+        assert_eq!(tools.len(), 7);
 
         let names: Vec<&str> = tools
             .iter()
             .map(|t| t["name"].as_str().unwrap())
             .collect();
+        assert!(names.contains(&"oneoffice.doc.create"));
+        assert!(names.contains(&"oneoffice.doc.inspect"));
         assert!(names.contains(&"oneoffice.diagram.compose"));
         assert!(names.contains(&"oneoffice.table.upsert"));
         assert!(names.contains(&"oneoffice.chart.upsert"));
@@ -147,5 +149,101 @@ mod tests {
         let verify_parsed: serde_json::Value = serde_json::from_str(&verify_res.content[0].text).unwrap();
         assert_eq!(verify_parsed["is_clean"], true);
         assert!(!verify_parsed["png_base64"].as_str().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_tool_doc_create_and_inspect_docx() {
+        let args = json!({
+            "format": "docx",
+            "title": "DOCX 생성 테스트 제안서",
+            "paragraphs": [
+                "이 문서는 ONEOFFICE MCP 서버의 표준 문서 생성 도구를 통해 자동 생성되었습니다.",
+                "두 번째 문단: 도식화 및 수식표와 함께 패키징됩니다."
+            ],
+            "table": [
+                ["품명", "단가", "수량"],
+                ["엔진 라이선스", "5000000", "2"],
+                ["유지보수", "1000000", "1"]
+            ],
+            "diagram_template_id": "problem-comparison-to-solution"
+        });
+
+        let create_res = call_tool("oneoffice.doc.create", &args).expect("doc create failed");
+        assert!(!create_res.is_error);
+        let create_parsed: serde_json::Value = serde_json::from_str(&create_res.content[0].text).unwrap();
+        assert_eq!(create_parsed["format"], "docx");
+        assert_eq!(create_parsed["has_table"], true);
+        assert_eq!(create_parsed["has_diagram"], true);
+        let doc_b64 = create_parsed["document_base64"].as_str().unwrap();
+        assert!(!doc_b64.is_empty());
+
+        // Inspect the generated DOCX
+        let inspect_args = json!({
+            "data_base64": doc_b64
+        });
+        let inspect_res = call_tool("oneoffice.doc.inspect", &inspect_args).expect("doc inspect failed");
+        assert!(!inspect_res.is_error);
+        let inspect_parsed: serde_json::Value = serde_json::from_str(&inspect_res.content[0].text).unwrap();
+        assert_eq!(inspect_parsed["format"], "docx");
+        assert!(inspect_parsed["paragraphs_count"].as_u64().unwrap() >= 2);
+        assert_eq!(inspect_parsed["tables_count"], 1);
+        assert_eq!(inspect_parsed["media_count"], 1);
+    }
+
+    #[test]
+    fn test_tool_doc_create_and_inspect_hwpx() {
+        let args = json!({
+            "format": "hwpx",
+            "title": "HWPX KS X 6101 제안서",
+            "paragraphs": [
+                "한국 공공기관 표준 HWPX 문서입니다.",
+                "513함수 엑셀 수식표와 제안서 도식이 무손실 결합됩니다."
+            ],
+            "table": [
+                ["구분", "공급가"],
+                ["서버", "12000000"],
+                ["합계", "=SUM(B2:B2)"]
+            ],
+            "diagram_template_id": "problem-comparison-to-solution"
+        });
+
+        let create_res = call_tool("oneoffice.doc.create", &args).expect("hwpx create failed");
+        assert!(!create_res.is_error);
+        let create_parsed: serde_json::Value = serde_json::from_str(&create_res.content[0].text).unwrap();
+        assert_eq!(create_parsed["format"], "hwpx");
+        assert_eq!(create_parsed["has_table"], true);
+        assert_eq!(create_parsed["has_diagram"], true);
+        let doc_b64 = create_parsed["document_base64"].as_str().unwrap();
+
+        // Inspect the generated HWPX
+        let inspect_args = json!({
+            "data_base64": doc_b64
+        });
+        let inspect_res = call_tool("oneoffice.doc.inspect", &inspect_args).expect("hwpx inspect failed");
+        assert!(!inspect_res.is_error);
+        let inspect_parsed: serde_json::Value = serde_json::from_str(&inspect_res.content[0].text).unwrap();
+        assert_eq!(inspect_parsed["format"], "hwpx");
+        assert_eq!(inspect_parsed["has_table"], true);
+        assert_eq!(inspect_parsed["has_diagram"], true);
+        let attachments = inspect_parsed["attachments"].as_array().unwrap();
+        let att_str: Vec<&str> = attachments.iter().map(|v| v.as_str().unwrap()).collect();
+        assert!(att_str.contains(&"BinData/table_1.xlsx"));
+    }
+
+    #[test]
+    fn test_tool_doc_inspect_pdf() {
+        let contract_pdf = oneoffice_pdf::generate_sample_korean_contract_pdf()
+            .expect("contract generation failed");
+        let pdf_b64 = BASE64.encode(&contract_pdf);
+
+        let inspect_args = json!({
+            "data_base64": pdf_b64
+        });
+        let inspect_res = call_tool("oneoffice.doc.inspect", &inspect_args).expect("pdf inspect failed");
+        assert!(!inspect_res.is_error);
+        let inspect_parsed: serde_json::Value = serde_json::from_str(&inspect_res.content[0].text).unwrap();
+        assert_eq!(inspect_parsed["format"], "pdf");
+        assert_eq!(inspect_parsed["page_count"], 1);
+        assert!(inspect_parsed["signing_anchors_count"].as_u64().unwrap() >= 1);
     }
 }
