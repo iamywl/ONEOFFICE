@@ -1,6 +1,6 @@
 # ONEOFFICE — 공식 V&V 실행 결과 보고서 (Verification & Validation Report)
 
-> **실행 일시**: 2026-11-10T12:29:52.592Z  
+> **실행 일시**: 2026-11-11T12:05:44.964Z  
 > **표준 근거**: IEEE Std 1012-2016 / ISO/IEC 12207 / ISO 32000-1 / ECMA-376 / KS X 6101  
 > **총괄 판정**: ✅ **100% VERIFIED & VALIDATED (합격)**
 
@@ -22,12 +22,12 @@
 
 | ID | 검증 항목 | 실행 명령 | 소요 시간 | 판정 |
 | :---: | :--- | :--- | :---: | :---: |
-| **VER-01** | Rust Memory Safety (unsafe_code = forbid, clippy zero-panic) | `cargo clippy --workspace --all-targets -- -D warnings` | 199ms | ✅ **PASS** |
-| **VER-02** | WASM32 Offline Webview Target Compilation Check | `cargo check -p oneoffice-bridge -p oneoffice-diagram -p oneoffice-hwpx-core -p oneoffice-pdf --target wasm32-unknown-unknown` | 143ms | ✅ **PASS** |
-| **VER-03** | Core Component Invariants (513 Excel Formulas, 26 Charts, Diagram Geometry) | `cargo test -p oneoffice-bridge -p oneoffice-diagram` | 501ms | ✅ **PASS** |
-| **VER-04** | 5-Format Byte Lossless Round-Trip Pipeline | `node scripts/qa/dummy-docs-pipeline.mjs` | 225ms | ✅ **PASS** |
-| **VER-05** | HWPX OWPML Schema Verification (37 tests) | `npm --prefix hanul-hwpx test` | 6063ms | ✅ **PASS** |
-| **VER-06** | Showcase Asset & Link Integrity Verification | `node scripts/qa/verify-readme.mjs` | 25ms | ✅ **PASS** |
+| **VER-01** | Rust Memory Safety (unsafe_code = forbid, clippy zero-panic) | `cargo clippy --workspace --all-targets -- -D warnings` | 174ms | ✅ **PASS** |
+| **VER-02** | WASM32 Offline Webview Target Compilation Check | `cargo check -p oneoffice-bridge -p oneoffice-diagram -p oneoffice-hwpx-core -p oneoffice-pdf --target wasm32-unknown-unknown` | 128ms | ✅ **PASS** |
+| **VER-03** | Core Component Invariants (513 Excel Formulas, 26 Charts, Diagram Geometry) | `cargo test -p oneoffice-bridge -p oneoffice-diagram` | 894ms | ✅ **PASS** |
+| **VER-04** | 5-Format Byte Lossless Round-Trip Pipeline | `node scripts/qa/dummy-docs-pipeline.mjs` | 201ms | ✅ **PASS** |
+| **VER-05** | HWPX OWPML Schema Verification (37 tests) | `npm --prefix hanul-hwpx test` | 3789ms | ✅ **PASS** |
+| **VER-06** | Showcase Asset & Link Integrity Verification | `node scripts/qa/verify-readme.mjs` | 23ms | ✅ **PASS** |
 
 - **메모리 안전성**: `unsafe_code = "forbid"` 준수, Clippy 제로 경고.
 - **WASM 호환성**: `wasm32-unknown-unknown` 4대 코어 크레이트 컴파일 100% 성공.
@@ -40,12 +40,12 @@
 
 | ID | 사용자 시나리오 명세 | 실측 대상 엔진 | 소요 시간 | 판정 |
 | :---: | :--- | :--- | :---: | :---: |
-| **VAL-SCN-01** | User Scenario 1: DOCX Table-to-Chart Live Linkage & In-Place Calculation | `cargo test -p oneoffice-ui test_interactive_table_recalculation -- --nocapture` | 146ms | ✅ **PASS** |
-| **VAL-SCN-02** | User Scenario 2: PPT Proposal Diagram & Shapes In-Place Work in DOCX | `cargo test -p oneoffice-diagram test_drawingml_compilation -- --nocapture` | 83ms | ✅ **PASS** |
-| **VAL-SCN-03** | User Scenario 3: Real Contract PDF Chroma-Key Stamp & Non-Destructive Signing | `cargo test -p oneoffice-pdf test_anchor_detection_and_chroma_key_stamping -- --nocapture` | 96ms | ✅ **PASS** |
-| **VAL-SCN-04** | User Scenario 4: Korean Zero-Tofu Font Binding & Theme Contrast Validation | `cargo test -p oneoffice-ui test_korean_font_installation_and_glyph_coverage -- --nocapture` | 131ms | ✅ **PASS** |
-| **VAL-SCN-05** | User Scenario 5: AI Agent MCP Autopilot & Closed-Loop Visual Self-Verification | `cargo test -p oneoffice-mcp test_tool_pdf_sign_and_visual_verify -- --nocapture` | 140ms | ✅ **PASS** |
-| **VAL-SCN-06** | User Scenario 6: Visual Showcase & Capture-Grounded Documentation Harness | `node scripts/qa/doc_harness.mjs` | 24ms | ✅ **PASS** |
+| **VAL-SCN-01** | User Scenario 1: DOCX Table-to-Chart Live Linkage & In-Place Calculation | `cargo test -p oneoffice-ui test_interactive_table_recalculation -- --nocapture` | 145ms | ✅ **PASS** |
+| **VAL-SCN-02** | User Scenario 2: PPT Proposal Diagram & Shapes In-Place Work in DOCX | `cargo test -p oneoffice-diagram test_drawingml_compilation -- --nocapture` | 232ms | ✅ **PASS** |
+| **VAL-SCN-03** | User Scenario 3: Real Contract PDF Chroma-Key Stamp & Non-Destructive Signing | `cargo test -p oneoffice-pdf test_anchor_detection_and_chroma_key_stamping -- --nocapture` | 197ms | ✅ **PASS** |
+| **VAL-SCN-04** | User Scenario 4: Korean Zero-Tofu Font Binding & Theme Contrast Validation | `cargo test -p oneoffice-ui test_korean_font_installation_and_glyph_coverage -- --nocapture` | 126ms | ✅ **PASS** |
+| **VAL-SCN-05** | User Scenario 5: AI Agent MCP Autopilot & Closed-Loop Visual Self-Verification | `cargo test -p oneoffice-mcp test_tool_pdf_sign_and_visual_verify -- --nocapture` | 513ms | ✅ **PASS** |
+| **VAL-SCN-06** | User Scenario 6: Visual Showcase & Capture-Grounded Documentation Harness | `node scripts/qa/doc_harness.mjs` | 32ms | ✅ **PASS** |
 
 ### 핵심 시나리오 실측 증빙:
 1. **[VAL-SCN-01] DOCX 표-차트 인플레이스 연동**:

@@ -367,4 +367,62 @@ mod tests {
         println!(">>> text_w: {}", text_w);
         assert!(text_w > 100.0, "Korean text layout must have non-zero measured width");
     }
+
+    #[test]
+    fn test_in_place_insert_image() {
+        let mut app = StudioApp::new();
+        let ctx = egui::Context::default();
+        let initial_imgs = app.doc_model.as_ref().map_or(0, |d| d.images.len());
+        app.insert_sample_image(&ctx);
+        assert_eq!(app.doc_model.as_ref().expect("doc model must exist").images.len(), initial_imgs + 1);
+        assert!(!app.doc_textures.is_empty());
+        assert!(app.is_dirty);
+    }
+
+    #[test]
+    fn test_docx_save_with_table_and_image() {
+        let mut app = StudioApp::new();
+        app.active_doc = ActiveDocumentKind::Docx;
+        let save_path = "/tmp/oneoffice_test_compound.docx".to_string();
+        app.current_file_path = Some(save_path.clone());
+        let ctx = egui::Context::default();
+        app.insert_sample_image(&ctx);
+        app.table_data = vec![
+            vec!["항목".into(), "수량".into(), "단가".into()],
+            vec!["서버".into(), "2".into(), "500000".into()],
+        ];
+
+        let res = app.save_current_document();
+        assert!(res.is_ok());
+
+        let bytes = std::fs::read(&save_path).expect("read saved docx failed");
+        let parsed = wordcraft_docx::read(&bytes).expect("parse saved docx failed");
+        assert!(!parsed.media.is_empty(), "media must be preserved in DOCX package");
+        assert!(parsed.body.iter().any(|b| b.as_table().is_some()), "table block must be preserved in DOCX body");
+        let _ = std::fs::remove_file(&save_path);
+    }
+
+    #[test]
+    fn test_hwpx_save_with_table_and_diagram() {
+        let mut app = StudioApp::new();
+        app.active_doc = ActiveDocumentKind::Hwpx;
+        let save_path = "/tmp/oneoffice_test_compound.hwpx".to_string();
+        app.current_file_path = Some(save_path.clone());
+        app.table_data = vec![
+            vec!["항목".into(), "금액".into()],
+            vec!["소프트웨어".into(), "1500000".into()],
+            vec!["합계 (SUM)".into(), "1500000".into()],
+        ];
+
+        let res = app.save_current_document();
+        assert!(res.is_ok());
+
+        let bytes = std::fs::read(&save_path).expect("read saved hwpx failed");
+        let pkg = oneoffice_hwpx_core::HwpxPackage::from_bytes(&bytes).expect("parse saved hwpx failed");
+        let sec0 = pkg.section_xml(0).expect("read sec0 failed");
+        assert!(sec0.contains("<hp:tbl"), "HWPX must contain embedded <hp:tbl>");
+        assert!(sec0.contains("<hp:container"), "HWPX must contain embedded diagram <hp:container>");
+        assert!(pkg.get_attachment("BinData/table_1.xlsx").is_some(), "HWPX must contain table_1.xlsx attachment");
+        let _ = std::fs::remove_file(&save_path);
+    }
 }

@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 use egui::{Color32, RichText, TextureHandle, TextureOptions, Ui};
 use serde::{Deserialize, Serialize};
 
@@ -1167,6 +1168,40 @@ impl StudioApp {
         }
     }
 
+    /// Inserts a high-resolution graphic into the loaded document and compiles its texture.
+    pub fn insert_sample_image(&mut self, ctx: &egui::Context) {
+        let sample_bytes = include_bytes!("../../../hanul-hwpx/docs/assets/icon.png");
+        let img_idx = self.doc_textures.len() + 1;
+        let img_name = format!("oneoffice_graphic_{img_idx}.png");
+
+        if let Some(doc) = &mut self.doc_model {
+            doc.images.push(DocImageItem {
+                name: img_name.clone(),
+                alt: "ONEOFFICE 제안서 인포그래픽 그림 자료".to_string(),
+                width_pt: 240.0,
+                height_pt: 240.0,
+                is_behind_text: false,
+                png_bytes: sample_bytes.to_vec(),
+            });
+        }
+
+        if let Ok(dyn_img) = image::load_from_memory(sample_bytes) {
+            let rgba = dyn_img.to_rgba8();
+            let size = [rgba.width() as usize, rgba.height() as usize];
+            let pixels = rgba.into_raw();
+            let color_img = egui::ColorImage::from_rgba_unmultiplied(size, &pixels);
+            let tex = ctx.load_texture(
+                format!("docx_img_{img_name}"),
+                color_img,
+                TextureOptions::LINEAR,
+            );
+            self.doc_textures.push((img_name, tex));
+        }
+
+        self.is_dirty = true;
+        self.status_text = "본문에 고해상도 그림 자료(이미지) 삽입 완료".to_string();
+    }
+
     /// Saves the current modified document to disk losslessly.
     pub fn save_current_document(&mut self) -> Result<String, String> {
         let target_path = self.current_file_path.clone().unwrap_or_else(|| match self.active_doc {
@@ -1189,13 +1224,49 @@ impl StudioApp {
                             wordcraft_doc::props::CharProps {
                                 size: Some(para.font_size),
                                 bold: Some(para.is_bold),
+                                italic: Some(para.is_italic),
+                                underline: if para.is_underline {
+                                    Some(wordcraft_doc::props::Underline::Single)
+                                } else {
+                                    None
+                                },
+                                strike: if para.is_strikethrough {
+                                    Some(true)
+                                } else {
+                                    None
+                                },
+                                color: Some(wordcraft_doc::props::TextColor::Rgb(
+                                    wordcraft_doc::props::Rgb(
+                                        para.text_color.r(),
+                                        para.text_color.g(),
+                                        para.text_color.b(),
+                                    ),
+                                )),
                                 ..Default::default()
                             },
                         );
                         body_blocks.push(wordcraft_doc::para_block(p));
                     }
 
-                    // Preserve media
+                    // Save table if present
+                    if !self.table_data.is_empty() {
+                        let rows = self.table_data.len();
+                        let cols = self.table_data.first().map_or(1, |r| r.len());
+                        let mut table = wordcraft_doc::Table::new(rows, cols, 468.0);
+                        for (r_idx, row_data) in self.table_data.iter().enumerate() {
+                            if let Some(row) = table.rows.get_mut(r_idx) {
+                                for (c_idx, val) in row_data.iter().enumerate() {
+                                    if let Some(cell) = row.cells.get_mut(c_idx) {
+                                        *cell = wordcraft_doc::Cell::with_text(val);
+                                        cell.props.width = Some(468.0 / cols as f32);
+                                    }
+                                }
+                            }
+                        }
+                        body_blocks.push(Arc::new(wordcraft_doc::Block::Table(table)));
+                    }
+
+                    // Preserve and save media
                     for img in &doc_model.images {
                         let key = doc.add_media(img.png_bytes.clone(), "png");
                         let wrap = if img.is_behind_text {
@@ -1237,11 +1308,58 @@ impl StudioApp {
                     .as_ref()
                     .and_then(|d| d.paragraphs.first())
                     .map_or("본문 내용", |p| &p.text);
-                let hwpx = oneoffice_hwpx_core::HwpxPackage::create_minimal_hwpx(title, first_para)
+                let mut hwpx = oneoffice_hwpx_core::HwpxPackage::create_minimal_hwpx(title, first_para)
                     .map_err(|e| format!("HWPX 생성 실패: {e}"))?;
-                let bytes = hwpx
-                    .to_bytes()
-                    .map_err(|e| format!("HWPX 직렬화 실패: {e}"))?;
+
+                let mut sec_xml = hwpx.section_xml(0).map_err(|e| format!("HWPX 섹션 읽기 실패: {e}"))?;
+
+                // Append additional paragraphs if any
+                if let Some(doc_model) = &self.doc_model {
+                    for (idx, p) in doc_model.paragraphs.iter().enumerate().skip(1) {
+                        let p_xml = format!(r#"<hp:p id="{idx}"><hp:run><hp:t>{}</hp:t></hp:run></hp:p>"#, p.text);
+                        if let Some((before_end, end_tag)) = sec_xml.rsplit_once("</hs:sec>") {
+                            sec_xml = format!("{before_end}{p_xml}{end_tag}");
+                        }
+                    }
+                }
+
+                // Embed table into HWPX with formula evaluation & sidecar
+                if !self.table_data.is_empty() {
+                    let mut cells = Vec::new();
+                    for (r_idx, row) in self.table_data.iter().enumerate() {
+                        let mut row_inputs = Vec::new();
+                        for (c_idx, val) in row.iter().enumerate() {
+                            if r_idx == self.table_data.len() - 1 && c_idx > 0 {
+                                let col_letter = (b'A' + c_idx as u8) as char;
+                                row_inputs.push(oneoffice_bridge::calc::CellInput::formula(format!("=SUM({col_letter}2:{col_letter}{r_idx})")));
+                            } else {
+                                row_inputs.push(oneoffice_bridge::calc::CellInput::text(val));
+                            }
+                        }
+                        cells.push(row_inputs);
+                    }
+
+                    let spec = oneoffice_bridge::calc::CalcTableSpec {
+                        sheet_name: "제안예산".to_string(),
+                        cells,
+                        merges: Vec::new(),
+                    };
+                    let mut sidecar = oneoffice_hwpx_core::HwpxTableFormulaSidecar::new("tbl-oneoffice-1", spec);
+                    if let Ok(output) = sidecar.evaluate()
+                        && let Ok(updated_sec) = oneoffice_hwpx_core::embed_table_into_section(&sec_xml, &output, "tbl-oneoffice-1", 10)
+                    {
+                        sec_xml = updated_sec;
+                        hwpx.add_binary_attachment("BinData/table_1.xlsx", output.xlsx_bytes);
+                    }
+                }
+
+                // Embed proposal diagram into HWPX
+                if let Ok(updated_sec) = oneoffice_hwpx_core::embed_diagram_into_section(&sec_xml, &self.diagram_widget.spec, 20) {
+                    sec_xml = updated_sec;
+                }
+
+                hwpx.set_section_xml(0, &sec_xml).map_err(|e| format!("HWPX 섹션 갱신 실패: {e}"))?;
+                let bytes = hwpx.to_bytes().map_err(|e| format!("HWPX 직렬화 실패: {e}"))?;
                 std::fs::write(&target_path, &bytes)
                     .map_err(|e| format!("파일 쓰기 실패: {e}"))?;
             }
@@ -1637,6 +1755,11 @@ impl StudioApp {
                         self.is_dirty = true;
                         self.status_text = "본문에 5x5 엑셀 수식 연동 표 삽입 완료".to_string();
                     }
+                    if ui.button("+ 그림 삽입").clicked() {
+                        self.push_undo_snapshot();
+                        let ctx = ui.ctx().clone();
+                        self.insert_sample_image(&ctx);
+                    }
                     if ui.button("+ 도식 삽입").clicked() {
                         self.push_undo_snapshot();
                         self.status_text = "제안서 인포그래픽 도식화 캔버스 삽입 완료".to_string();
@@ -1842,6 +1965,7 @@ impl StudioApp {
 
                     let mut add_new_para = false;
                     let mut insert_table = false;
+                    let mut insert_image = false;
                     let mut insert_chart = false;
                     let mut insert_diagram = false;
 
@@ -2061,6 +2185,10 @@ impl StudioApp {
                                 insert_table = true;
                             }
 
+                            if ui.button("+ 그림 삽입").clicked() {
+                                insert_image = true;
+                            }
+
                             if ui.button("+ 차트 삽입").clicked() {
                                 insert_chart = true;
                             }
@@ -2089,17 +2217,40 @@ impl StudioApp {
                         // Render real image textures if present
                         if !self.doc_textures.is_empty() {
                             ui.add_space(12.0);
-                            for (name, tex) in &self.doc_textures {
-                                ui.label(
-                                    RichText::new(format!("[그림 자료] {name}"))
-                                        .size(11.0)
-                                        .color(Color32::from_rgb(100, 116, 139)),
-                                );
-                                let aspect = tex.size()[0] as f32 / (tex.size()[1].max(1) as f32);
-                                let render_w = 480.0_f32.min(tex.size()[0] as f32);
-                                let render_h = render_w / aspect.max(0.1);
-                                ui.image((tex.id(), egui::vec2(render_w, render_h)));
+                            let mut delete_img_idx = None;
+                            for (idx, (name, tex)) in self.doc_textures.iter().enumerate() {
+                                ui.group(|ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.label(
+                                            RichText::new(format!("🖼️ [그림 자료] {name}"))
+                                                .strong()
+                                                .size(12.0)
+                                                .color(Color32::from_rgb(30, 41, 59)),
+                                        );
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            if ui.button(RichText::new("삭제 X").color(Color32::from_rgb(220, 38, 38)).size(11.0)).clicked() {
+                                                delete_img_idx = Some(idx);
+                                            }
+                                        });
+                                    });
+                                    let aspect = tex.size()[0] as f32 / (tex.size()[1].max(1) as f32);
+                                    let render_w = 480.0_f32.min(tex.size()[0] as f32);
+                                    let render_h = render_w / aspect.max(0.1);
+                                    ui.image((tex.id(), egui::vec2(render_w, render_h)));
+                                    ui.add_space(4.0);
+                                });
                                 ui.add_space(8.0);
+                            }
+                            if let Some(del_idx) = delete_img_idx {
+                                self.push_undo_snapshot();
+                                let _ = self.doc_textures.remove(del_idx);
+                                if let Some(doc) = &mut self.doc_model
+                                    && del_idx < doc.images.len()
+                                {
+                                    doc.images.remove(del_idx);
+                                }
+                                self.is_dirty = true;
+                                self.status_text = "그림 자료 삭제 완료".to_string();
                             }
                         }
                     } else {
@@ -2151,6 +2302,12 @@ impl StudioApp {
                     if insert_diagram {
                         self.push_undo_snapshot();
                         self.status_text = "본문에 제안서 도식화 캔버스 삽입 완료".to_string();
+                    }
+
+                    if insert_image {
+                        self.push_undo_snapshot();
+                        let ctx = ui.ctx().clone();
+                        self.insert_sample_image(&ctx);
                     }
 
                     // Common Compound Blocks: Table, Chart, and Diagram are First-Class in ALL document types (DOCX & HWPX)
