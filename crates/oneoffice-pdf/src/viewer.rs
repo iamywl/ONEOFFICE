@@ -193,7 +193,7 @@ impl PdfDocumentSession {
             found.push(TextAnchor {
                 text: "(인)".to_string(),
                 page_index,
-                rect_pt: [150.0, 745.0, 36.0, 24.0],
+                rect_pt: [195.0, 736.0, 36.0, 24.0],
             });
         }
 

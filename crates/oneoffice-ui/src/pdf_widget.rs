@@ -157,7 +157,7 @@ impl PdfViewerWidget {
 
             // Seal Label Customizer
             ui.label("직인 문구:");
-            ui.add(egui::TextEdit::singleline(&mut self.seal_label).desired_width(100.0));
+            ui.add(egui::TextEdit::singleline(&mut self.seal_label).desired_width(140.0));
 
             // Seal stamping actions
             if ui.button("(인) 앵커 자동 날인").clicked()
@@ -173,7 +173,7 @@ impl PdfViewerWidget {
                     self.selected_sig_id = None;
                     self.status_message = "선택된 서명을 삭제했습니다.".to_string();
                 }
-            } else if self.layer_stack.can_undo() && ui.button("↩ 서명 취소").clicked() {
+            } else if self.layer_stack.can_undo() && ui.button("서명 취소").clicked() {
                 self.layer_stack.undo();
             }
 

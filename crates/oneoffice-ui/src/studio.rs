@@ -886,6 +886,12 @@ impl StudioApp {
     /// Loads and parses a DOCX document into the studio, compiling embedded textures.
     pub fn load_docx_bytes(&mut self, ctx: &egui::Context, bytes: &[u8]) {
         self.parse_docx_bytes_headless(bytes);
+        self.table_data = self
+            .doc_model
+            .as_ref()
+            .and_then(|d| d.tables.first())
+            .cloned()
+            .unwrap_or_default();
 
         // Compile textures from loaded images
         self.doc_textures.clear();
@@ -955,6 +961,11 @@ impl StudioApp {
                     if !table_rows.is_empty() {
                         self.table_data = table_rows.clone();
                         loaded.tables.push(table_rows);
+                        self.table_selected_cell = (1, 1);
+                        if let Some(val) = self.table_data.get(1).and_then(|r| r.get(1)) {
+                            self.formula_hud.cell_address = "B2".to_string();
+                            self.formula_hud.formula_text = val.clone();
+                        }
                     }
                 }
 
@@ -1023,6 +1034,11 @@ impl StudioApp {
                 rows = self.table_data.clone();
             } else {
                 self.table_data = rows.clone();
+                self.table_selected_cell = (1, 1);
+                if let Some(val) = self.table_data.get(1).and_then(|r| r.get(1)) {
+                    self.formula_hud.cell_address = "B2".to_string();
+                    self.formula_hud.formula_text = val.clone();
+                }
             }
 
             self.spreadsheet_model = Some(LoadedSpreadsheet {
@@ -1928,21 +1944,22 @@ impl StudioApp {
 
     fn show_document_editor(&mut self, ui: &mut Ui) {
         ui.vertical_centered(|ui| {
-            // Floating formula HUD
-            ui.group(|ui| {
-                if let crate::formula_hud::FormulaHudEvent::Commit(new_val) = self.formula_hud.show(ui) {
-                    let (r, c) = self.table_selected_cell;
-                    if let Some(row) = self.table_data.get_mut(r)
-                        && c < row.len()
-                    {
-                        row[c] = new_val;
-                        self.recalculate_table_sums();
-                        self.status_text = "513 엑셀 수식표 실시간 재계산 완료".to_string();
+            // Floating formula HUD (only displayed when structured table exists)
+            if !self.table_data.is_empty() {
+                ui.group(|ui| {
+                    if let crate::formula_hud::FormulaHudEvent::Commit(new_val) = self.formula_hud.show(ui) {
+                        let (r, c) = self.table_selected_cell;
+                        if let Some(row) = self.table_data.get_mut(r)
+                            && c < row.len()
+                        {
+                            row[c] = new_val;
+                            self.recalculate_table_sums();
+                            self.status_text = "513 엑셀 수식표 실시간 재계산 완료".to_string();
+                        }
                     }
-                }
-            });
-
-            ui.add_space(12.0);
+                });
+                ui.add_space(12.0);
+            }
 
             // Paper canvas container
             egui::Frame::canvas(ui.style())
@@ -2168,35 +2185,91 @@ impl StudioApp {
                         }
 
                         // In-place Block Insertion Action Bar (Paragraph, Table, Chart, Diagram)
-                        ui.add_space(8.0);
-                        ui.horizontal(|ui| {
-                            if ui
-                                .button(
-                                    RichText::new("+ 새 문단")
-                                        .strong()
-                                        .color(StudioTheme::brand_accent()),
-                                )
-                                .clicked()
-                            {
-                                add_new_para = true;
-                            }
+                        ui.add_space(10.0);
+                        egui::Frame::new()
+                            .fill(Color32::from_rgb(248, 250, 252))
+                            .stroke(egui::Stroke::new(1.0, Color32::from_rgb(226, 232, 240)))
+                            .corner_radius(egui::CornerRadius::same(6))
+                            .inner_margin(egui::Margin::symmetric(10, 6))
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        RichText::new("블록 삽입:")
+                                            .size(11.0)
+                                            .color(Color32::from_rgb(100, 116, 139)),
+                                    );
+                                    if ui
+                                        .add(
+                                            egui::Button::new(
+                                                RichText::new("+ 문단 추가")
+                                                    .strong()
+                                                    .size(11.0)
+                                                    .color(Color32::from_rgb(37, 99, 235)),
+                                            )
+                                            .fill(Color32::WHITE),
+                                        )
+                                        .clicked()
+                                    {
+                                        add_new_para = true;
+                                    }
 
-                            if ui.button("+ 표 삽입").clicked() {
-                                insert_table = true;
-                            }
+                                    if ui
+                                        .add(
+                                            egui::Button::new(
+                                                RichText::new("+ 표 삽입")
+                                                    .size(11.0)
+                                                    .color(Color32::from_rgb(51, 65, 85)),
+                                            )
+                                            .fill(Color32::WHITE),
+                                        )
+                                        .clicked()
+                                    {
+                                        insert_table = true;
+                                    }
 
-                            if ui.button("+ 그림 삽입").clicked() {
-                                insert_image = true;
-                            }
+                                    if ui
+                                        .add(
+                                            egui::Button::new(
+                                                RichText::new("+ 그림 삽입")
+                                                    .size(11.0)
+                                                    .color(Color32::from_rgb(51, 65, 85)),
+                                            )
+                                            .fill(Color32::WHITE),
+                                        )
+                                        .clicked()
+                                    {
+                                        insert_image = true;
+                                    }
 
-                            if ui.button("+ 차트 삽입").clicked() {
-                                insert_chart = true;
-                            }
+                                    if ui
+                                        .add(
+                                            egui::Button::new(
+                                                RichText::new("+ 차트 삽입")
+                                                    .size(11.0)
+                                                    .color(Color32::from_rgb(51, 65, 85)),
+                                            )
+                                            .fill(Color32::WHITE),
+                                        )
+                                        .clicked()
+                                    {
+                                        insert_chart = true;
+                                    }
 
-                            if ui.button("+ 도식 삽입").clicked() {
-                                insert_diagram = true;
-                            }
-                        });
+                                    if ui
+                                        .add(
+                                            egui::Button::new(
+                                                RichText::new("+ 도식 삽입")
+                                                    .size(11.0)
+                                                    .color(Color32::from_rgb(51, 65, 85)),
+                                            )
+                                            .fill(Color32::WHITE),
+                                        )
+                                        .clicked()
+                                    {
+                                        insert_diagram = true;
+                                    }
+                                });
+                            });
 
                         if add_new_para {
                             doc.paragraphs.push(DocParagraph {
@@ -2312,73 +2385,119 @@ impl StudioApp {
 
                     // Common Compound Blocks: Table, Chart, and Diagram are First-Class in ALL document types (DOCX & HWPX)
                     {
-                        ui.add_space(12.0);
+                        ui.add_space(14.0);
                         ui.horizontal(|ui| {
                             ui.label(
                                 RichText::new("1. 513함수 연동 예산 수식표 (클릭 시 수식바 연동)")
                                     .strong()
+                                    .size(13.0)
                                     .color(Color32::from_rgb(15, 23, 42)),
                             );
-                            if ui.small_button("+ 행 추가").clicked() {
-                                self.push_undo_snapshot();
-                                let cols = self.table_data.first().map_or(4, |r| r.len());
-                                self.table_data.push(vec!["-".into(); cols]);
-                                self.is_dirty = true;
-                            }
-                            if ui.small_button("+ 열 추가").clicked() {
-                                self.push_undo_snapshot();
-                                for row in &mut self.table_data {
-                                    row.push("-".into());
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.small_button("+ 열 추가").clicked() {
+                                    self.push_undo_snapshot();
+                                    for row in &mut self.table_data {
+                                        row.push("-".into());
+                                    }
+                                    self.is_dirty = true;
                                 }
-                                self.is_dirty = true;
-                            }
+                                if ui.small_button("+ 행 추가").clicked() {
+                                    self.push_undo_snapshot();
+                                    let cols = self.table_data.first().map_or(4, |r| r.len());
+                                    self.table_data.push(vec!["-".into(); cols]);
+                                    self.is_dirty = true;
+                                }
+                            });
                         });
 
-                        // Interactive Excel Formula Table Grid
-                        egui::Grid::new("hwpx_calc_table")
-                            .striped(true)
-                            .min_col_width(110.0)
+                        // Interactive Excel Formula Table Grid with crisp borders, padding & header fills
+                        egui::Frame::group(ui.style())
+                            .fill(Color32::WHITE)
+                            .stroke(egui::Stroke::new(1.0, Color32::from_rgb(203, 213, 225)))
+                            .corner_radius(egui::CornerRadius::same(4))
+                            .inner_margin(egui::Margin::symmetric(0, 0))
                             .show(ui, |ui| {
-                                let mut clicked_cell = None;
-                                for (row_idx, row) in self.table_data.iter().enumerate() {
-                                    for (col_idx, val) in row.iter().enumerate() {
-                                        let is_header = row_idx == 0 || col_idx == 0;
-                                        let is_selected =
-                                            self.table_selected_cell == (row_idx, col_idx);
+                                egui::Grid::new("hwpx_calc_table")
+                                    .striped(false)
+                                    .min_col_width(120.0)
+                                    .spacing(egui::vec2(0.0, 0.0))
+                                    .show(ui, |ui| {
+                                        let mut clicked_cell = None;
+                                        for (row_idx, row) in self.table_data.iter().enumerate() {
+                                            let is_header_row = row_idx == 0;
+                                            let is_total_row = row_idx == self.table_data.len() - 1;
 
-                                        let cell_text = if is_header {
-                                            RichText::new(val)
-                                                .strong()
-                                                .color(Color32::from_rgb(15, 23, 42))
-                                        } else if row_idx == self.table_data.len() - 1 {
-                                            RichText::new(val)
-                                                .strong()
-                                                .color(Color32::from_rgb(37, 99, 235))
-                                        } else {
-                                            RichText::new(val).color(Color32::from_rgb(51, 65, 85))
-                                        };
+                                            for (col_idx, val) in row.iter().enumerate() {
+                                                let is_selected = self.table_selected_cell == (row_idx, col_idx);
 
-                                        let resp = ui.selectable_label(is_selected, cell_text);
-                                        if resp.clicked() {
-                                            clicked_cell = Some((row_idx, col_idx));
+                                                let cell_bg = if is_selected {
+                                                    Color32::from_rgb(239, 246, 255)
+                                                } else if is_header_row {
+                                                    Color32::from_rgb(241, 245, 249)
+                                                } else if is_total_row {
+                                                    Color32::from_rgb(248, 250, 252)
+                                                } else if row_idx % 2 == 1 {
+                                                    Color32::WHITE
+                                                } else {
+                                                    Color32::from_rgb(248, 250, 252)
+                                                };
+
+                                                let border_color = if is_selected {
+                                                    Color32::from_rgb(37, 99, 235)
+                                                } else {
+                                                    Color32::from_rgb(226, 232, 240)
+                                                };
+
+                                                let border_width = if is_selected { 2.0 } else { 0.5 };
+
+                                                let cell_text = if is_header_row {
+                                                    RichText::new(val)
+                                                        .strong()
+                                                        .color(Color32::from_rgb(15, 23, 42))
+                                                        .size(12.0)
+                                                } else if is_total_row {
+                                                    RichText::new(val)
+                                                        .strong()
+                                                        .color(Color32::from_rgb(37, 99, 235))
+                                                        .size(12.0)
+                                                } else {
+                                                    RichText::new(val)
+                                                        .color(Color32::from_rgb(51, 65, 85))
+                                                        .size(12.0)
+                                                };
+
+                                                egui::Frame::new()
+                                                    .fill(cell_bg)
+                                                    .stroke(egui::Stroke::new(border_width, border_color))
+                                                    .inner_margin(egui::Margin::symmetric(14, 8))
+                                                    .show(ui, |ui| {
+                                                        ui.set_min_width(120.0);
+                                                        let is_num = val.parse::<f64>().is_ok();
+                                                        if is_num && !is_header_row {
+                                                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                                if ui.selectable_label(is_selected, cell_text).clicked() {
+                                                                    clicked_cell = Some((row_idx, col_idx));
+                                                                }
+                                                            });
+                                                        } else if ui.selectable_label(is_selected, cell_text).clicked() {
+                                                            clicked_cell = Some((row_idx, col_idx));
+                                                        }
+                                                    });
+                                            }
+                                            ui.end_row();
                                         }
-                                    }
-                                    ui.end_row();
-                                }
 
-                                if let Some((r, c)) = clicked_cell {
-                                    self.table_selected_cell = (r, c);
-                                    let col_letter = (b'A' + c as u8) as char;
-                                    self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
-                                    if r == self.table_data.len() - 1 && c > 0 {
-                                        self.formula_hud.formula_text =
-                                            format!("=SUM({col_letter}2:{col_letter}{r})");
-                                    } else if let Some(val) =
-                                        self.table_data.get(r).and_then(|row| row.get(c))
-                                    {
-                                        self.formula_hud.formula_text = val.clone();
-                                    }
-                                }
+                                        if let Some((r, c)) = clicked_cell {
+                                            self.table_selected_cell = (r, c);
+                                            let col_letter = (b'A' + c as u8) as char;
+                                            self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
+                                            if r == self.table_data.len() - 1 && c > 0 {
+                                                self.formula_hud.formula_text = format!("=SUM({col_letter}2:{col_letter}{r})");
+                                            } else if let Some(val) = self.table_data.get(r).and_then(|row| row.get(c)) {
+                                                self.formula_hud.formula_text = val.clone();
+                                            }
+                                        }
+                                    });
                             });
 
                         ui.add_space(4.0);
@@ -2389,17 +2508,28 @@ impl StudioApp {
                         );
 
                         // 2. Embedded 26-type Excel vector chart
-                        ui.add_space(14.0);
+                        ui.add_space(16.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("2. 26종 엑셀 연동 차트 (Chart Engine v2)")
+                                    .strong()
+                                    .size(13.0)
+                                    .color(Color32::from_rgb(15, 23, 42)),
+                            );
+                        });
                         let ctx = ui.ctx().clone();
                         self.chart_widget.show(ui, &ctx, &self.table_data, self.theme == StudioTheme::Dark);
 
                         // 3. In-place proposal infographic diagram
-                        ui.add_space(14.0);
-                        ui.label(
-                            RichText::new("3. 제안서 인포그래픽 도식화 구성도 (10대 컨설팅 템플릿)")
-                                .strong()
-                                .color(Color32::from_rgb(15, 23, 42)),
-                        );
+                        ui.add_space(16.0);
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("3. 제안서 인포그래픽 도식화 구성도 (10대 컨설팅 템플릿)")
+                                    .strong()
+                                    .size(13.0)
+                                    .color(Color32::from_rgb(15, 23, 42)),
+                            );
+                        });
                         self.diagram_widget.show(ui);
                     }
                 });
@@ -2449,26 +2579,65 @@ impl StudioApp {
             egui::ScrollArea::both()
                 .auto_shrink([false, false])
                 .show(ui, |ui| {
-                    let total_cols = 8.max(self.table_data.first().map_or(4, |r| r.len()));
-                    let total_rows = 16.max(self.table_data.len());
+                    let total_cols = 12.max(self.table_data.first().map_or(4, |r| r.len()));
+                    let total_rows = 18.max(self.table_data.len());
 
                     egui::Grid::new("xlsx_full_grid")
-                        .striped(true)
-                        .min_col_width(115.0)
+                        .striped(false)
+                        .spacing(egui::vec2(0.0, 0.0))
                         .show(ui, |ui| {
                             // Column Headers: Corner + A, B, C...
-                            ui.label(RichText::new(" ◢ ").color(Color32::from_rgb(148, 163, 184)));
+                            let header_bg = match self.theme {
+                                StudioTheme::Dark => Color32::from_rgb(30, 41, 59),
+                                StudioTheme::Light => Color32::from_rgb(241, 245, 249),
+                            };
+                            let header_border = match self.theme {
+                                StudioTheme::Dark => Color32::from_rgb(51, 65, 85),
+                                StudioTheme::Light => Color32::from_rgb(203, 213, 225),
+                            };
+                            let header_text_color = match self.theme {
+                                StudioTheme::Dark => Color32::from_rgb(203, 213, 225),
+                                StudioTheme::Light => Color32::from_rgb(71, 85, 105),
+                            };
+
+                            // Corner cell
+                            egui::Frame::new()
+                                .fill(header_bg)
+                                .stroke(egui::Stroke::new(1.0, header_border))
+                                .inner_margin(egui::Margin::symmetric(10, 5))
+                                .show(ui, |ui| {
+                                    ui.set_min_width(42.0);
+                                    ui.set_min_height(20.0);
+                                    ui.label("");
+                                });
+
                             for c in 0..total_cols {
-                                let col_name = (b'A' + c as u8) as char;
-                                ui.label(
-                                    RichText::new(format!("     {col_name}     "))
-                                        .strong()
-                                        .size(13.0)
-                                        .color(match self.theme {
-                                            StudioTheme::Dark => Color32::from_rgb(226, 232, 240),
-                                            StudioTheme::Light => Color32::from_rgb(71, 85, 105),
-                                        }),
-                                );
+                                let col_name = if c < 26 {
+                                    ((b'A' + c as u8) as char).to_string()
+                                } else {
+                                    format!("A{}", (b'A' + (c - 26) as u8) as char)
+                                };
+                                egui::Frame::new()
+                                    .fill(header_bg)
+                                    .stroke(egui::Stroke::new(1.0, header_border))
+                                    .inner_margin(egui::Margin::symmetric(14, 5))
+                                    .show(ui, |ui| {
+                                        ui.set_min_width(125.0);
+                                        ui.set_min_height(20.0);
+                                        ui.with_layout(
+                                            egui::Layout::centered_and_justified(
+                                                egui::Direction::LeftToRight,
+                                            ),
+                                            |ui| {
+                                                ui.label(
+                                                    RichText::new(col_name)
+                                                        .strong()
+                                                        .size(12.0)
+                                                        .color(header_text_color),
+                                                );
+                                            },
+                                        );
+                                    });
                             }
                             ui.end_row();
 
@@ -2478,15 +2647,27 @@ impl StudioApp {
 
                             for row_idx in 0..total_rows {
                                 // Row Header: 1, 2, 3...
-                                ui.label(
-                                    RichText::new(format!("  {}  ", row_idx + 1))
-                                        .monospace()
-                                        .size(12.0)
-                                        .color(match self.theme {
-                                            StudioTheme::Dark => Color32::from_rgb(148, 163, 184),
-                                            StudioTheme::Light => Color32::from_rgb(100, 116, 139),
-                                        }),
-                                );
+                                egui::Frame::new()
+                                    .fill(header_bg)
+                                    .stroke(egui::Stroke::new(1.0, header_border))
+                                    .inner_margin(egui::Margin::symmetric(8, 4))
+                                    .show(ui, |ui| {
+                                        ui.set_min_width(42.0);
+                                        ui.set_min_height(22.0);
+                                        ui.with_layout(
+                                            egui::Layout::centered_and_justified(
+                                                egui::Direction::LeftToRight,
+                                            ),
+                                            |ui| {
+                                                ui.label(
+                                                    RichText::new(format!("{}", row_idx + 1))
+                                                        .monospace()
+                                                        .size(11.0)
+                                                        .color(header_text_color),
+                                                );
+                                            },
+                                        );
+                                    });
 
                                 for col_idx in 0..total_cols {
                                     let is_selected = self.table_selected_cell == (row_idx, col_idx);
@@ -2499,46 +2680,96 @@ impl StudioApp {
                                         .cloned()
                                         .unwrap_or_default();
 
-                                    if is_editing {
-                                        let edit = egui::TextEdit::singleline(&mut self.cell_edit_buffer)
-                                            .desired_width(100.0);
-                                        let resp = ui.add(edit);
-                                        if resp.lost_focus() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                                            commit_edit = true;
+                                    let cell_bg = if is_selected {
+                                        match self.theme {
+                                            StudioTheme::Dark => Color32::from_rgb(30, 58, 138),
+                                            StudioTheme::Light => Color32::from_rgb(219, 234, 254),
                                         }
                                     } else {
-                                        let is_num = cell_val.parse::<f64>().is_ok();
-                                        let display_str = if cell_val.is_empty() {
-                                            " ".to_string()
-                                        } else {
-                                            cell_val.clone()
-                                        };
-
-                                        let text_color = if is_selected {
-                                            Color32::from_rgb(37, 99, 235)
-                                        } else if is_num {
-                                            match self.theme {
-                                                StudioTheme::Dark => Color32::from_rgb(52, 211, 153),
-                                                StudioTheme::Light => Color32::from_rgb(16, 185, 129),
+                                        match self.theme {
+                                            StudioTheme::Dark => {
+                                                if row_idx % 2 == 1 {
+                                                    Color32::from_rgb(15, 23, 42)
+                                                } else {
+                                                    Color32::from_rgb(24, 34, 53)
+                                                }
                                             }
-                                        } else {
-                                            match self.theme {
-                                                StudioTheme::Dark => Color32::from_rgb(241, 245, 249),
-                                                StudioTheme::Light => Color32::from_rgb(15, 23, 42),
+                                            StudioTheme::Light => {
+                                                if row_idx % 2 == 1 {
+                                                    Color32::WHITE
+                                                } else {
+                                                    Color32::from_rgb(248, 250, 252)
+                                                }
                                             }
-                                        };
+                                        }
+                                    };
 
-                                        let resp = ui.selectable_label(
-                                            is_selected,
-                                            RichText::new(&display_str).color(text_color).size(13.0),
-                                        );
-                                        if resp.clicked() {
-                                            clicked_cell = Some((row_idx, col_idx));
-                                        }
-                                        if resp.double_clicked() {
-                                            start_edit = Some((row_idx, col_idx, cell_val));
-                                        }
-                                    }
+                                    let cell_border = if is_selected {
+                                        egui::Stroke::new(2.0, Color32::from_rgb(37, 99, 235))
+                                    } else {
+                                        egui::Stroke::new(
+                                            0.5,
+                                            match self.theme {
+                                                StudioTheme::Dark => Color32::from_rgb(51, 65, 85),
+                                                StudioTheme::Light => Color32::from_rgb(226, 232, 240),
+                                            },
+                                        )
+                                    };
+
+                                    egui::Frame::new()
+                                        .fill(cell_bg)
+                                        .stroke(cell_border)
+                                        .inner_margin(egui::Margin::symmetric(10, 5))
+                                        .show(ui, |ui| {
+                                            ui.set_min_width(125.0);
+                                            ui.set_min_height(22.0);
+
+                                            if is_editing {
+                                                let edit = egui::TextEdit::singleline(&mut self.cell_edit_buffer)
+                                                    .desired_width(115.0);
+                                                let resp = ui.add(edit);
+                                                if resp.lost_focus() || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                                    commit_edit = true;
+                                                }
+                                            } else {
+                                                let is_num = cell_val.parse::<f64>().is_ok();
+                                                let display_str = if cell_val.is_empty() {
+                                                    " ".to_string()
+                                                } else {
+                                                    cell_val.clone()
+                                                };
+
+                                                let text_color = if is_selected {
+                                                    Color32::from_rgb(37, 99, 235)
+                                                } else if is_num {
+                                                    match self.theme {
+                                                        StudioTheme::Dark => Color32::from_rgb(52, 211, 153),
+                                                        StudioTheme::Light => Color32::from_rgb(16, 185, 129),
+                                                    }
+                                                } else {
+                                                    match self.theme {
+                                                        StudioTheme::Dark => Color32::from_rgb(241, 245, 249),
+                                                        StudioTheme::Light => Color32::from_rgb(15, 23, 42),
+                                                    }
+                                                };
+
+                                                let label = RichText::new(&display_str).color(text_color).size(12.0);
+                                                let resp = if is_num {
+                                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                        ui.selectable_label(is_selected, label)
+                                                    }).inner
+                                                } else {
+                                                    ui.selectable_label(is_selected, label)
+                                                };
+
+                                                if resp.clicked() {
+                                                    clicked_cell = Some((row_idx, col_idx));
+                                                }
+                                                if resp.double_clicked() {
+                                                    start_edit = Some((row_idx, col_idx, cell_val));
+                                                }
+                                            }
+                                        });
                                 }
                                 ui.end_row();
                             }
@@ -2583,9 +2814,13 @@ impl StudioApp {
             ui.add_space(8.0);
             ui.horizontal(|ui| {
                 let (r, c) = self.table_selected_cell;
-                let col_letter = (b'A' + c as u8) as char;
+                let col_letter = if c < 26 {
+                    ((b'A' + c as u8) as char).to_string()
+                } else {
+                    format!("A{}", (b'A' + (c - 26) as u8) as char)
+                };
                 ui.label(
-                    RichText::new(format!("READY · 활성 셀 [{col_letter}{}] · 시트 크기 16×8 · 513개 엑셀 수식 및 차트 엔진 가동 중", r + 1))
+                    RichText::new(format!("READY · 활성 셀 [{col_letter}{}] · 시트 크기 18×12 · 513개 엑셀 수식 및 차트 엔진 가동 중", r + 1))
                         .size(11.0)
                         .color(Color32::from_rgb(100, 116, 139)),
                 );
@@ -2632,30 +2867,68 @@ impl StudioApp {
 
                         for (idx, slide) in model.slides.iter().enumerate() {
                             let is_active = model.active_slide_index == idx;
-                            ui.group(|ui| {
-                                ui.horizontal(|ui| {
-                                    let title_short = if slide.title.chars().count() > 10 {
-                                        let s: String = slide.title.chars().take(10).collect();
-                                        format!("{s}...")
+                            egui::Frame::new()
+                                .fill(if is_active {
+                                    if self.theme == StudioTheme::Dark {
+                                        Color32::from_rgb(30, 41, 59)
                                     } else {
-                                        slide.title.clone()
-                                    };
-                                    let btn = ui.selectable_label(
-                                        is_active,
-                                        RichText::new(format!("{}. {}", idx + 1, title_short)).size(11.0),
-                                    );
-                                    if btn.clicked() {
-                                        model.active_slide_index = idx;
+                                        Color32::from_rgb(239, 246, 255)
                                     }
+                                } else if self.theme == StudioTheme::Dark {
+                                    Color32::from_rgb(15, 23, 42)
+                                } else {
+                                    Color32::WHITE
+                                })
+                                .stroke(if is_active {
+                                    egui::Stroke::new(2.0, Color32::from_rgb(37, 99, 235))
+                                } else {
+                                    egui::Stroke::new(1.0, Color32::from_rgb(203, 213, 225))
+                                })
+                                .corner_radius(egui::CornerRadius::same(6))
+                                .inner_margin(egui::Margin::symmetric(10, 8))
+                                .show(ui, |ui| {
+                                    ui.set_width(170.0);
+                                    ui.horizontal(|ui| {
+                                        ui.label(
+                                            RichText::new(format!("{:02}", idx + 1))
+                                                .monospace()
+                                                .strong()
+                                                .size(11.0)
+                                                .color(if is_active {
+                                                    Color32::from_rgb(37, 99, 235)
+                                                } else {
+                                                    Color32::from_rgb(148, 163, 184)
+                                                }),
+                                        );
+                                        let title_short = if slide.title.chars().count() > 10 {
+                                            let s: String = slide.title.chars().take(10).collect();
+                                            format!("{s}...")
+                                        } else {
+                                            slide.title.clone()
+                                        };
+                                        let btn = ui.selectable_label(
+                                            is_active,
+                                            RichText::new(title_short)
+                                                .strong()
+                                                .size(11.0)
+                                                .color(if is_active {
+                                                    Color32::from_rgb(37, 99, 235)
+                                                } else {
+                                                    Color32::from_rgb(71, 85, 105)
+                                                }),
+                                        );
+                                        if btn.clicked() {
+                                            model.active_slide_index = idx;
+                                        }
 
-                                    if total_slides > 1
-                                        && ui.small_button("X").on_hover_text("슬라이드 삭제").clicked()
-                                    {
-                                        delete_slide_idx = Some(idx);
-                                    }
+                                        if total_slides > 1
+                                            && ui.small_button("✕").on_hover_text("슬라이드 삭제").clicked()
+                                        {
+                                            delete_slide_idx = Some(idx);
+                                        }
+                                    });
                                 });
-                            });
-                            ui.add_space(2.0);
+                            ui.add_space(4.0);
                         }
 
                         if let Some(del_idx) = delete_slide_idx {
@@ -2689,27 +2962,30 @@ impl StudioApp {
 
                                 // In-place editable slide title with 16:9 Widescreen badge
                                 ui.horizontal(|ui| {
-                                    ui.label(
-                                        RichText::new("제목:")
-                                            .strong()
-                                            .color(Color32::from_rgb(100, 116, 139)),
-                                    );
                                     let title_edit = egui::TextEdit::singleline(&mut slide.title)
-                                        .font(egui::FontId::proportional(20.0))
+                                        .font(egui::FontId::proportional(22.0))
                                         .text_color(Color32::from_rgb(15, 23, 42))
                                         .frame(egui::Frame::NONE)
-                                        .desired_width(520.0);
+                                        .desired_width(560.0);
                                     let resp = ui.add(title_edit);
                                     if resp.changed() {
                                         self.is_dirty = true;
                                     }
 
                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                        ui.label(
-                                            RichText::new("16:9 Widescreen (1920×1080)")
-                                                .size(10.0)
-                                                .color(StudioTheme::brand_accent()),
-                                        );
+                                        egui::Frame::new()
+                                            .fill(Color32::from_rgb(239, 246, 255))
+                                            .stroke(egui::Stroke::new(1.0, Color32::from_rgb(191, 219, 254)))
+                                            .corner_radius(egui::CornerRadius::same(4))
+                                            .inner_margin(egui::Margin::symmetric(6, 2))
+                                            .show(ui, |ui| {
+                                                ui.label(
+                                                    RichText::new("16:9 Widescreen")
+                                                        .size(10.0)
+                                                        .strong()
+                                                        .color(StudioTheme::brand_accent()),
+                                                );
+                                            });
                                     });
                                 });
 
@@ -2753,12 +3029,8 @@ impl StudioApp {
                                 }
 
                                 ui.add_space(12.0);
-                                // Inline presentation diagram sub-canvas (bounded within 16:9 frame)
-                                egui::ScrollArea::vertical()
-                                    .max_height(250.0)
-                                    .show(ui, |ui| {
-                                        self.diagram_widget.show(ui);
-                                    });
+                                // Inline presentation diagram sub-canvas
+                                self.diagram_widget.show(ui);
                             });
                     }
                 });

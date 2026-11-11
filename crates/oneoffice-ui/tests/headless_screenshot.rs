@@ -79,11 +79,12 @@ mod tests {
         app.document_title = "2026 차세대 사업계획서.hwpx".to_string();
         let bytes = find_doc("dummy_proposal.hwpx");
         app.load_hwpx_bytes(&bytes);
+        app.chart_widget.is_visible = true;
 
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
-            .with_size(egui::vec2(1440.0, 900.0))
+            .with_size(egui::vec2(1440.0, 1650.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
                 state.show(ui);
             }, app);
@@ -125,7 +126,7 @@ mod tests {
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
-            .with_size(egui::vec2(1440.0, 900.0))
+            .with_size(egui::vec2(1440.0, 1150.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
                 state.show(ui);
             }, app);
@@ -144,7 +145,7 @@ mod tests {
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
-            .with_size(egui::vec2(1440.0, 900.0))
+            .with_size(egui::vec2(1440.0, 1150.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
                 state.show(ui);
             }, app);
@@ -161,7 +162,7 @@ mod tests {
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
-            .with_size(egui::vec2(1440.0, 900.0))
+            .with_size(egui::vec2(1440.0, 1020.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
                 let ctx = ui.ctx().clone();
                 state.pdf_widget.ensure_sample_loaded(&ctx);
@@ -178,11 +179,14 @@ mod tests {
         app.theme = StudioTheme::Light;
         app.active_doc = ActiveDocumentKind::Hwpx;
         app.document_title = "2026 차세대 사업계획서 (Light Theme).hwpx".to_string();
+        let bytes = find_doc("dummy_proposal.hwpx");
+        app.load_hwpx_bytes(&bytes);
+        app.chart_widget.is_visible = true;
 
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
-            .with_size(egui::vec2(1440.0, 900.0))
+            .with_size(egui::vec2(1440.0, 1650.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
                 state.show(ui);
             }, app);
@@ -202,7 +206,7 @@ mod tests {
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
             .with_accessibility_check(false)
-            .with_size(egui::vec2(1440.0, 900.0))
+            .with_size(egui::vec2(1440.0, 1150.0))
             .build_ui_state(|ui, state: &mut StudioApp| {
                 state.show(ui);
             }, app);
@@ -226,6 +230,9 @@ mod tests {
         app.recalculate_table_sums();
         app.chart_widget.is_visible = true;
         app.chart_widget.selected_kind = "column_clustered".to_string();
+        app.table_selected_cell = (1, 4);
+        app.formula_hud.cell_address = "E2".to_string();
+        app.formula_hud.formula_text = "12500000".to_string();
 
         let mut harness = Harness::builder()
             .allow_missing_glyphs()
