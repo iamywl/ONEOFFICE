@@ -1511,12 +1511,12 @@ impl StudioApp {
             ui.separator();
 
             // 2. Undo / Redo Group
-            let undo_btn = ui.add_enabled(!self.undo_stack.is_empty(), egui::Button::new("<"));
+            let undo_btn = ui.add_enabled(!self.undo_stack.is_empty(), egui::Button::new("실행취소"));
             if undo_btn.on_hover_text("실행 취소 (Ctrl+Z)").clicked() {
                 self.undo();
             }
 
-            let redo_btn = ui.add_enabled(!self.redo_stack.is_empty(), egui::Button::new(">"));
+            let redo_btn = ui.add_enabled(!self.redo_stack.is_empty(), egui::Button::new("다시실행"));
             if redo_btn.on_hover_text("다시 실행 (Ctrl+Y)").clicked() {
                 self.redo();
             }
@@ -1719,16 +1719,16 @@ impl StudioApp {
                     }
                 });
 
-            // Alignment buttons
-            if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "<").on_hover_text("왼쪽 정렬").clicked() {
+            // Alignment buttons (좌/중/우)
+            if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "좌").on_hover_text("왼쪽 정렬").clicked() {
                 self.format_state.align = egui::Align::LEFT;
                 self.apply_format_to_active_paragraph();
             }
-            if ui.selectable_label(self.format_state.align == egui::Align::Center, "C").on_hover_text("가운데 정렬").clicked() {
+            if ui.selectable_label(self.format_state.align == egui::Align::Center, "중").on_hover_text("가운데 정렬").clicked() {
                 self.format_state.align = egui::Align::Center;
                 self.apply_format_to_active_paragraph();
             }
-            if ui.selectable_label(self.format_state.align == egui::Align::RIGHT, ">").on_hover_text("오른쪽 정렬").clicked() {
+            if ui.selectable_label(self.format_state.align == egui::Align::RIGHT, "우").on_hover_text("오른쪽 정렬").clicked() {
                 self.format_state.align = egui::Align::RIGHT;
                 self.apply_format_to_active_paragraph();
             }
@@ -2123,19 +2123,30 @@ impl StudioApp {
                                     text_style = text_style.background_color(hl);
                                 }
 
-                                let resp = ui.selectable_label(false, text_style);
-                                if resp.clicked() {
-                                    self.active_paragraph_idx = Some(idx);
-                                    self.format_state.font_size = para.font_size;
-                                    self.format_state.is_bold = para.is_bold;
-                                    self.format_state.is_italic = para.is_italic;
-                                    self.format_state.is_underline = para.is_underline;
-                                    self.format_state.is_strikethrough = para.is_strikethrough;
-                                    self.format_state.text_color = para.text_color;
-                                    self.format_state.highlight_color = para.highlight_color;
-                                    self.format_state.font_family = para.font_family.clone();
-                                    self.format_state.align = para.align;
-                                }
+                                let layout = match para.align {
+                                    egui::Align::Center => egui::Layout::top_down(egui::Align::Center),
+                                    egui::Align::Max => egui::Layout::top_down(egui::Align::Max),
+                                    _ => egui::Layout::top_down(egui::Align::Min),
+                                };
+                                ui.with_layout(layout, |ui| {
+                                    let resp = ui.add(
+                                        egui::Label::new(text_style)
+                                            .wrap()
+                                            .sense(egui::Sense::click()),
+                                    );
+                                    if resp.clicked() {
+                                        self.active_paragraph_idx = Some(idx);
+                                        self.format_state.font_size = para.font_size;
+                                        self.format_state.is_bold = para.is_bold;
+                                        self.format_state.is_italic = para.is_italic;
+                                        self.format_state.is_underline = para.is_underline;
+                                        self.format_state.is_strikethrough = para.is_strikethrough;
+                                        self.format_state.text_color = para.text_color;
+                                        self.format_state.highlight_color = para.highlight_color;
+                                        self.format_state.font_family = para.font_family.clone();
+                                        self.format_state.align = para.align;
+                                    }
+                                });
                             }
                             ui.add_space(4.0);
                         }

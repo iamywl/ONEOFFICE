@@ -31,16 +31,18 @@ description: Independent Zero-Trust Adversarial QA & Cross-Platform Visual Audit
    - 네이티브 데스크톱 앱(`OneOffice.app` 및 크로스플랫폼 CI 매트릭스) 구동 및 `--control` TCP 스크린샷 캡처 검증.
 5. **Tier 5 — 라이트/다크 양방향 명도 대비 & 인터랙션 트랩 게이트**:
    - 라이트·다크 모드 양쪽에서 2x Retina 스크린샷을 캡처하여 용지 순백색 유지, 모달 불투명도 `≥ 94%`, WCAG 명도 대비 `≥ 4.5:1`(모달 `≥ 7.0:1`), 한글 IME 조합 무결성, 직인/서브캔버스 선택 불가 트랩 0건 검증.
-32: 6. **Tier 6 — AI Agent MCP 엔드투엔드 자율 워크플로우 게이트**:
-33:    - `oneoffice-mcp`만으로 (1) 제안서 `.hwpx` 작성(도식화 + 엑셀 수식 예산표 + 차트) → (2) `visual.verify_page` 무결점 확인 → (3) `.pdf` 변환 → (4) `oneoffice.pdf.sign`으로 `"(인)"` 위치에 투명 직인 날인까지 단일 파이프라인 완주 검증!
-34: 
-35: ## 3. 커밋 표준 및 검증 매트릭스 승격 거버넌스 (`VERSIONING_AND_COMMIT_POLICY.md`)
-36: 1. **커밋 메시지 규격**:
-37:    - `qa(matrix): [<TASK-ID>] promote to verified with screenshot proof`
-38:    - `test(oracle): [<TASK-ID>] add adversarial regression fixture`
-39: 2. **무신뢰(Zero-Trust) 승격 규칙**:
-40:    - 6단계 실측 결과(로그 수치, 무결점 스크린샷 파일)가 실제로 디스크에 존재하지 않으면 절대 `docs/QA_VERIFICATION_MATRIX.md`를 승격하지 않는다.
-41:    - 결함 발견 시 즉시 반려 리포트를 발행하고 상태를 `🔴 Bug / Blocked`로 강등한다.
-42: 
-43: ## 4. 동적 갭 회귀 픽스처 영속화
-44: - `docs/GAPS.md`에 새로운 GAP-ID가 등록될 때마다 이를 재현하는 최소 테스트 픽스처를 `tests/fixtures/`에 추가하여, 수정 후 영구적으로 재발하지 않도록 회귀 방지망을 구축한다.
+6. **Tier 6 — AI Agent MCP 엔드투엔드 자율 워크플로우 게이트**:
+   - `oneoffice-mcp`만으로 (1) 제안서 `.hwpx` 작성(도식화 + 엑셀 수식 예산표 + 차트) → (2) `visual.verify_page` 무결점 확인 → (3) `.pdf` 변환 → (4) `oneoffice.pdf.sign`으로 `"(인)"` 위치에 투명 직인 날인까지 단일 파이프라인 완주 검증!
+7. **Tier 7 — 52종 전 기능 실측 스크린샷 갤러리 지속 감사 게이트**:
+   - `cargo test -p oneoffice-ui --test gallery_screenshots`를 상시 실행하여 52종 스크린샷 전수의 비검정 유효 픽셀(`> 350,000px`), 풍부한 UI 색상 심도(`unique_colors >= 10`), CJK Tofu 0건, 레이아웃 충돌/잘림 0건을 디스크 아티팩트(`docs/assets/qa/gallery/`)로 지속 보존 및 감사한다.
+
+## 3. 커밋 표준 및 검증 매트릭스 승격 거버넌스 (`VERSIONING_AND_COMMIT_POLICY.md`)
+1. **커밋 메시지 규격**:
+   - `qa(matrix): [<TASK-ID>] promote to verified with screenshot proof`
+   - `test(oracle): [<TASK-ID>] add adversarial regression fixture`
+2. **무신뢰(Zero-Trust) 승격 규칙**:
+   - 7단계 실측 결과(로그 수치, 무결점 스크린샷 파일)가 실제로 디스크에 존재하지 않으면 절대 `docs/QA_VERIFICATION_MATRIX.md`를 승격하지 않는다.
+   - 결함 발견 시 즉시 반려 리포트를 발행하고 상태를 `🔴 Bug / Blocked`로 강등한다.
+
+## 4. 동적 갭 회귀 픽스처 영속화
+- `docs/GAPS.md`에 새로운 GAP-ID가 등록될 때마다 이를 재현하는 최소 테스트 픽스처를 `tests/fixtures/`에 추가하여, 수정 후 영구적으로 재발하지 않도록 회귀 방지망을 구축한다.

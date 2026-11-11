@@ -97,6 +97,7 @@ flowchart TD
 11. **한글 CJK Tofu(ㅁ) 글리프 누락 엄단 원칙 (Zero Tofu Guarantee)**: 모든 데스크톱 앱(`egui`), Webview, VSIX 및 UI 컴포넌트는 시스템 한글 폰트(`Apple SD Gothic Neo`, `Pretendard`, `Malgun Gothic` 등)를 의무 바인딩(`install_korean_fonts`)해야 합니다. UI 실행 화면에서 한글이 `ㅁ` 박스로 깨지는 현상이 단 한 글자라도 발견되면 즉시 빌드 실패 및 반려 처리합니다.
 12. **복합 문서 그림 자료(DrawingML / OWPML) 실측 검증 의무화 (No Empty Docs)**: DOCX, HWPX 등의 복합 문서 생성 시 텍스트만 채운 빈 껍데기를 금지합니다. 실제 도식화 PNG, 26종 차트 PNG, 직인(BehindText) 투명 PNG 등의 그림 자료가 문서 패키지 내부(`word/media/`, `BinData/`)에 실존하고, DrawingML(`<w:drawing><wp:inline>`, `<wp:anchor>`) 태그로 정상 바인딩되어 역직렬화(`wordcraft_docx::read`, `HwpxPackage::from_bytes`) 시 무손실로 복원됨을 실측 증명해야 합니다.
 13. **가짜 목업 및 껍데기 HTML 배포 절대 엄단 원칙 (No Hollow HTML / Real Renderer Binding)**: VS Code Custom Editor나 데스크톱 앱에서 단 몇 줄의 정적 안내 문구나 하드코딩된 더미 HTML(`<div>ONEOFFICE 통합 스튜디오</div>`)을 반환하는 껍데기 구현을 일절 금지합니다. 실제 서브모듈(`hanul-hwpx`, `OPEN_PPTX` 등)의 검증된 렌더러와 번들 에셋(`vendor/studio`, `media/`, 캔버스 조판 스크립트)을 직접 마운트하여, 문서를 열었을 때 실제 텍스트, 표, 도형, 서식이 온전히 렌더링되고 실시간 상호작용이 가능해야 합니다.
+14. **상용 오피스급 인터페이스 완성도 및 52종 갤러리 지속 감사 의무화 (Commercial Polish & 52-Shot Gallery Guarantee)**: 단순 프로토타입 수준의 모호한 기호나 레이아웃 왜곡을 엄단하며, 인간 중심의 명확한 리본 버튼 명칭(`실행취소`, `다시실행`, `좌/중/우 정렬`), 다크 테마 셀 텍스트 고가독성 사수, 스프레드시트 1440px 풀 그리드, 슬라이드 내부 도식 클리핑 제로를 52종 전 기능 스크린샷 갤러리(`docs/assets/qa/gallery/`)로 지속 증명해야 합니다.
 
 ---
 
