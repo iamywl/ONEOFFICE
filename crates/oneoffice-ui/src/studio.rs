@@ -2473,13 +2473,14 @@ impl StudioApp {
                                                     .show(ui, |ui| {
                                                         ui.set_min_width(120.0);
                                                         let is_num = val.parse::<f64>().is_ok();
-                                                        if is_num && !is_header_row {
+                                                        let resp = if is_num && !is_header_row {
                                                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                                                if ui.selectable_label(is_selected, cell_text).clicked() {
-                                                                    clicked_cell = Some((row_idx, col_idx));
-                                                                }
-                                                            });
-                                                        } else if ui.selectable_label(is_selected, cell_text).clicked() {
+                                                                ui.add(egui::Label::new(cell_text).sense(egui::Sense::click()))
+                                                            }).inner
+                                                        } else {
+                                                            ui.add(egui::Label::new(cell_text).sense(egui::Sense::click()))
+                                                        };
+                                                        if resp.clicked() {
                                                             clicked_cell = Some((row_idx, col_idx));
                                                         }
                                                     });
@@ -2756,10 +2757,10 @@ impl StudioApp {
                                                 let label = RichText::new(&display_str).color(text_color).size(12.0);
                                                 let resp = if is_num {
                                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                                        ui.selectable_label(is_selected, label)
+                                                        ui.add(egui::Label::new(label).sense(egui::Sense::click()))
                                                     }).inner
                                                 } else {
-                                                    ui.selectable_label(is_selected, label)
+                                                    ui.add(egui::Label::new(label).sense(egui::Sense::click()))
                                                 };
 
                                                 if resp.clicked() {
