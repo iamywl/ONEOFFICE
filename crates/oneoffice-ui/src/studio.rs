@@ -2222,7 +2222,7 @@ impl StudioApp {
                                 ui.group(|ui| {
                                     ui.horizontal(|ui| {
                                         ui.label(
-                                            RichText::new(format!("🖼️ [그림 자료] {name}"))
+                                            RichText::new(format!("[그림 자료] {name}"))
                                                 .strong()
                                                 .size(12.0)
                                                 .color(Color32::from_rgb(30, 41, 59)),
