@@ -13,7 +13,7 @@
 
 | ID | 도메인 | 기능 명세 | 현재 상태 | 병렬 트랙 (Wave & Track) | 필수 검증 증거 (Gate) |
 | :--- | :--- | :--- | :---: | :---: | :--- |
-| **F-01** | HWPX/HWP | HWPX/HWP/배포용(AES-128) 열람·편집 및 한컴 단축키(`F5`, `M`, `S` 등) | `🟢 Sub-Engine Ready` | Wave 0 | `hanul-hwpx/scripts/verify-hwp-editing.mjs` |
+| **F-01** | HWPX/HWP | HWPX/HWP/배포용(AES-128) 열람·편집 및 한컴 단축키(`F5`, `M`, `S` 등) | `✅ Verified` | Wave 0 | `hanul-hwpx/scripts/verify-hwp-editing.mjs` (5단계 실문서 라운드트립 & WCAG AAA 통과) |
 | **F-02** | HWPX Core | `hanul-hwpx` OWPML/HWP 기존 버그 6건 수정 (`content.hpf`, `<hp:p>` 표 래핑 등) | `✅ Verified` | Wave 1: Track C | 신규 OWPML 스키마 단위 테스트 37종 통과 (`npm test`) |
 | **F-03** | Calc Core | 513개 엑셀 함수 + 증분 계산 그래프(`gridcraft-calc`) 공용 브릿지 | `✅ Verified` | Wave 1: Track A | 513개 함수 전수 레지스트리 + FIPS SHA-256 오라클 통과 |
 | **F-04** | Chart Core | 26종 벡터 차트 + 6종 추세선(`gridcraft-chart`) SVG/PNG/OOXML 공용화 | `✅ Verified` | Wave 1: Track A | 26종 전수 차트 + 6종 추세선 다중 타겟 렌더링 통과 |

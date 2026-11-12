@@ -386,6 +386,120 @@ impl StudioApp {
         }
     }
 
+    fn format_with_commas(n: i64) -> String {
+        let s = n.abs().to_string();
+        let mut res = String::new();
+        let len = s.len();
+        for (i, ch) in s.chars().enumerate() {
+            if i > 0 && (len - i).is_multiple_of(3) {
+                res.push(',');
+            }
+            res.push(ch);
+        }
+        if n < 0 {
+            format!("-{res}")
+        } else {
+            res
+        }
+    }
+
+    /// Formats the selected cell according to the specified formatting kind.
+    pub fn format_selected_cell(&mut self, kind: &str) {
+        let (r, c) = self.table_selected_cell;
+        let parsed_val = self
+            .table_data
+            .get(r)
+            .and_then(|row| row.get(c))
+            .map(|cell| cell.trim().replace(['₩', ',', '%', ' '], ""))
+            .and_then(|clean| clean.parse::<f64>().ok());
+
+        if let Some(val) = parsed_val {
+            self.push_undo_snapshot();
+            if let Some(row) = self.table_data.get_mut(r)
+                && c < row.len()
+            {
+                match kind {
+                    "currency" => {
+                        row[c] = format!("₩{}", Self::format_with_commas(val as i64));
+                    }
+                    "number" => {
+                        row[c] = Self::format_with_commas(val as i64);
+                    }
+                    "percent" => {
+                        row[c] = format!("{:.1}%", val);
+                    }
+                    _ => {
+                        row[c] = format!("{val}");
+                    }
+                }
+            }
+            self.recalculate_table_sums();
+            self.is_dirty = true;
+        }
+    }
+
+    /// Calculates column sum and appends a summary row to the spreadsheet.
+    pub fn calculate_selected_column_sum(&mut self) {
+        let (_, c) = self.table_selected_cell;
+        let mut sum = 0.0;
+        let mut count = 0usize;
+        for row in &self.table_data {
+            if let Some(cell) = row.get(c) {
+                let clean = cell.trim().replace(['₩', ',', '%', ' '], "");
+                if let Ok(v) = clean.parse::<f64>() {
+                    sum += v;
+                    count += 1;
+                }
+            }
+        }
+        if count > 0 {
+            self.push_undo_snapshot();
+            let col_count = self.table_data.first().map_or(4, |r| r.len());
+            let mut new_row = vec![String::new(); col_count];
+            if !new_row.is_empty() {
+                new_row[0] = "합계 (SUM)".to_string();
+            }
+            if c < new_row.len() {
+                new_row[c] = Self::format_with_commas(sum as i64);
+            }
+            self.table_data.push(new_row);
+            self.is_dirty = true;
+            let col_ch = if c < 26 { (b'A' + c as u8) as char } else { '?' };
+            self.status_text = format!("{col_ch}열 합계: {} 계산 및 새 행 추가 완료", Self::format_with_commas(sum as i64));
+        }
+    }
+
+    /// Calculates column average and appends an average row to the spreadsheet.
+    pub fn calculate_selected_column_average(&mut self) {
+        let (_, c) = self.table_selected_cell;
+        let mut sum = 0.0;
+        let mut count = 0usize;
+        for row in &self.table_data {
+            if let Some(cell) = row.get(c) {
+                let clean = cell.trim().replace(['₩', ',', '%', ' '], "");
+                if let Ok(v) = clean.parse::<f64>() {
+                    sum += v;
+                    count += 1;
+                }
+            }
+        }
+        if count > 0 {
+            self.push_undo_snapshot();
+            let col_count = self.table_data.first().map_or(4, |r| r.len());
+            let mut new_row = vec![String::new(); col_count];
+            if !new_row.is_empty() {
+                new_row[0] = "평균 (AVG)".to_string();
+            }
+            if c < new_row.len() {
+                new_row[c] = format!("{:.1}", sum / count as f64);
+            }
+            self.table_data.push(new_row);
+            self.is_dirty = true;
+            let col_ch = if c < 26 { (b'A' + c as u8) as char } else { '?' };
+            self.status_text = format!("{col_ch}열 평균: {:.1} 계산 완료", sum / count as f64);
+        }
+    }
+
     /// Pushes a snapshot of the active document state to the undo history stack.
     pub fn push_undo_snapshot(&mut self) {
         let snapshot = match self.active_doc {
@@ -1529,216 +1643,216 @@ impl StudioApp {
 
             ui.separator();
 
-            // 3. Paragraph Style, Font Family & Font Styling Group
-            egui::ComboBox::from_id_salt("font_family_combo")
-                .selected_text(&self.format_state.font_family)
-                .width(85.0)
-                .show_ui(ui, |ui| {
-                    for family in ["Pretendard", "Apple SD Gothic Neo", "맑은 고딕", "나눔고딕", "바탕체", "모노스페이스"] {
-                        let is_sel = self.format_state.font_family == family;
-                        if ui.selectable_label(is_sel, family).clicked() {
-                            self.push_undo_snapshot();
-                            self.format_state.font_family = family.to_string();
-                            self.apply_format_to_active_paragraph();
-                        }
-                    }
-                });
-
-            let current_style = if self.format_state.font_size >= 22.0 {
-                "제목 1"
-            } else if self.format_state.font_size >= 18.0 {
-                "제목 2"
-            } else if self.format_state.font_size >= 15.0 {
-                "소제목"
-            } else {
-                "본문"
-            };
-
-            egui::ComboBox::from_id_salt("para_style_combo")
-                .selected_text(current_style)
-                .width(65.0)
-                .show_ui(ui, |ui| {
-                    if ui.selectable_label(self.format_state.font_size == 22.0, "제목 1 (22pt)").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.font_size = 22.0;
-                        self.format_state.is_bold = true;
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.font_size == 18.0, "제목 2 (18pt)").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.font_size = 18.0;
-                        self.format_state.is_bold = true;
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.font_size == 15.0, "소제목 (15pt)").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.font_size = 15.0;
-                        self.format_state.is_bold = true;
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.font_size == 13.0, "본문 (13pt)").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.font_size = 13.0;
-                        self.format_state.is_bold = false;
-                        self.apply_format_to_active_paragraph();
-                    }
-                });
-
-            // Font size stepper
-            if ui.small_button("-").clicked() && self.format_state.font_size > 9.0 {
-                self.push_undo_snapshot();
-                self.format_state.font_size -= 1.0;
-                self.apply_format_to_active_paragraph();
-            }
-            ui.label(
-                RichText::new(format!("{:.0}pt", self.format_state.font_size))
-                    .strong()
-                    .size(12.0),
-            );
-            if ui.small_button("+").clicked() && self.format_state.font_size < 36.0 {
-                self.push_undo_snapshot();
-                self.format_state.font_size += 1.0;
-                self.apply_format_to_active_paragraph();
-            }
-
-            // Bold toggle
-            let bold_resp = ui.selectable_label(
-                self.format_state.is_bold,
-                RichText::new(" B ").strong(),
-            );
-            if bold_resp.clicked() {
-                self.push_undo_snapshot();
-                self.format_state.is_bold = !self.format_state.is_bold;
-                self.apply_format_to_active_paragraph();
-            }
-
-            // Italic toggle
-            let italic_resp = ui.selectable_label(
-                self.format_state.is_italic,
-                RichText::new(" I ").italics(),
-            );
-            if italic_resp.clicked() {
-                self.push_undo_snapshot();
-                self.format_state.is_italic = !self.format_state.is_italic;
-                self.apply_format_to_active_paragraph();
-            }
-
-            // Underline toggle
-            let underline_resp = ui.selectable_label(
-                self.format_state.is_underline,
-                RichText::new(" U ").underline(),
-            );
-            if underline_resp.clicked() {
-                self.push_undo_snapshot();
-                self.format_state.is_underline = !self.format_state.is_underline;
-                self.apply_format_to_active_paragraph();
-            }
-
-            // Strikethrough toggle
-            let strike_resp = ui.selectable_label(
-                self.format_state.is_strikethrough,
-                RichText::new(" S ").strikethrough(),
-            );
-            if strike_resp.clicked() {
-                self.push_undo_snapshot();
-                self.format_state.is_strikethrough = !self.format_state.is_strikethrough;
-                self.apply_format_to_active_paragraph();
-            }
-
-            // Text color selector
-            egui::ComboBox::from_id_salt("text_color_combo")
-                .selected_text(if self.format_state.text_color == Color32::from_rgb(30, 64, 175) {
-                    "네이비"
-                } else if self.format_state.text_color == Color32::from_rgb(185, 28, 28) {
-                    "빨강"
-                } else if self.format_state.text_color == Color32::from_rgb(4, 120, 87) {
-                    "초록"
-                } else if self.format_state.text_color == Color32::from_rgb(124, 58, 237) {
-                    "보라"
-                } else {
-                    "검정"
-                })
-                .width(55.0)
-                .show_ui(ui, |ui| {
-                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(15, 23, 42), "검정").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.text_color = Color32::from_rgb(15, 23, 42);
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(30, 64, 175), "네이비").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.text_color = Color32::from_rgb(30, 64, 175);
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(185, 28, 28), "빨강").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.text_color = Color32::from_rgb(185, 28, 28);
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(4, 120, 87), "초록").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.text_color = Color32::from_rgb(4, 120, 87);
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(124, 58, 237), "보라").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.text_color = Color32::from_rgb(124, 58, 237);
-                        self.apply_format_to_active_paragraph();
-                    }
-                });
-
-            // Highlight (형광펜) selector
-            egui::ComboBox::from_id_salt("highlight_combo")
-                .selected_text(match self.format_state.highlight_color {
-                    Some(c) if c == Color32::from_rgb(254, 240, 138) => "형광:노랑",
-                    Some(c) if c == Color32::from_rgb(187, 247, 208) => "형광:연두",
-                    Some(c) if c == Color32::from_rgb(186, 230, 253) => "형광:하늘",
-                    _ => "형광펜",
-                })
-                .width(65.0)
-                .show_ui(ui, |ui| {
-                    if ui.selectable_label(self.format_state.highlight_color.is_none(), "없음").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.highlight_color = None;
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(254, 240, 138)), "노랑").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.highlight_color = Some(Color32::from_rgb(254, 240, 138));
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(187, 247, 208)), "연두").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.highlight_color = Some(Color32::from_rgb(187, 247, 208));
-                        self.apply_format_to_active_paragraph();
-                    }
-                    if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(186, 230, 253)), "하늘").clicked() {
-                        self.push_undo_snapshot();
-                        self.format_state.highlight_color = Some(Color32::from_rgb(186, 230, 253));
-                        self.apply_format_to_active_paragraph();
-                    }
-                });
-
-            // Alignment buttons (좌/중/우)
-            if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "좌").on_hover_text("왼쪽 정렬").clicked() {
-                self.format_state.align = egui::Align::LEFT;
-                self.apply_format_to_active_paragraph();
-            }
-            if ui.selectable_label(self.format_state.align == egui::Align::Center, "중").on_hover_text("가운데 정렬").clicked() {
-                self.format_state.align = egui::Align::Center;
-                self.apply_format_to_active_paragraph();
-            }
-            if ui.selectable_label(self.format_state.align == egui::Align::RIGHT, "우").on_hover_text("오른쪽 정렬").clicked() {
-                self.format_state.align = egui::Align::RIGHT;
-                self.apply_format_to_active_paragraph();
-            }
-
-            ui.separator();
-
-            // 4. Insert / Actions
+            // 3. Contextual tools based on ActiveDocumentKind
             match self.active_doc {
                 ActiveDocumentKind::Docx | ActiveDocumentKind::Hwpx => {
-                    if ui.button("+ 새 문단").clicked() {
+                    // Paragraph Style, Font Family & Font Styling Group
+                    egui::ComboBox::from_id_salt("font_family_combo")
+                        .selected_text(&self.format_state.font_family)
+                        .width(85.0)
+                        .show_ui(ui, |ui| {
+                            for family in ["Pretendard", "Apple SD Gothic Neo", "맑은 고딕", "나눔고딕", "바탕체", "모노스페이스"] {
+                                let is_sel = self.format_state.font_family == family;
+                                if ui.selectable_label(is_sel, family).clicked() {
+                                    self.push_undo_snapshot();
+                                    self.format_state.font_family = family.to_string();
+                                    self.apply_format_to_active_paragraph();
+                                }
+                            }
+                        });
+
+                    let current_style = if self.format_state.font_size >= 22.0 {
+                        "제목 1"
+                    } else if self.format_state.font_size >= 18.0 {
+                        "제목 2"
+                    } else if self.format_state.font_size >= 15.0 {
+                        "소제목"
+                    } else {
+                        "본문"
+                    };
+
+                    egui::ComboBox::from_id_salt("para_style_combo")
+                        .selected_text(current_style)
+                        .width(65.0)
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(self.format_state.font_size == 22.0, "제목 1 (22pt)").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.font_size = 22.0;
+                                self.format_state.is_bold = true;
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.font_size == 18.0, "제목 2 (18pt)").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.font_size = 18.0;
+                                self.format_state.is_bold = true;
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.font_size == 15.0, "소제목 (15pt)").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.font_size = 15.0;
+                                self.format_state.is_bold = true;
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.font_size == 13.0, "본문 (13pt)").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.font_size = 13.0;
+                                self.format_state.is_bold = false;
+                                self.apply_format_to_active_paragraph();
+                            }
+                        });
+
+                    // Font size stepper
+                    if ui.small_button("-").clicked() && self.format_state.font_size > 9.0 {
+                        self.push_undo_snapshot();
+                        self.format_state.font_size -= 1.0;
+                        self.apply_format_to_active_paragraph();
+                    }
+                    ui.label(
+                        RichText::new(format!("{:.0}pt", self.format_state.font_size))
+                            .strong()
+                            .size(12.0),
+                    );
+                    if ui.small_button("+").clicked() && self.format_state.font_size < 36.0 {
+                        self.push_undo_snapshot();
+                        self.format_state.font_size += 1.0;
+                        self.apply_format_to_active_paragraph();
+                    }
+
+                    // Bold toggle
+                    let bold_resp = ui.selectable_label(
+                        self.format_state.is_bold,
+                        RichText::new(" B ").strong(),
+                    );
+                    if bold_resp.clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.is_bold = !self.format_state.is_bold;
+                        self.apply_format_to_active_paragraph();
+                    }
+
+                    // Italic toggle
+                    let italic_resp = ui.selectable_label(
+                        self.format_state.is_italic,
+                        RichText::new(" I ").italics(),
+                    );
+                    if italic_resp.clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.is_italic = !self.format_state.is_italic;
+                        self.apply_format_to_active_paragraph();
+                    }
+
+                    // Underline toggle
+                    let underline_resp = ui.selectable_label(
+                        self.format_state.is_underline,
+                        RichText::new(" U ").underline(),
+                    );
+                    if underline_resp.clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.is_underline = !self.format_state.is_underline;
+                        self.apply_format_to_active_paragraph();
+                    }
+
+                    // Strikethrough toggle
+                    let strike_resp = ui.selectable_label(
+                        self.format_state.is_strikethrough,
+                        RichText::new(" S ").strikethrough(),
+                    );
+                    if strike_resp.clicked() {
+                        self.push_undo_snapshot();
+                        self.format_state.is_strikethrough = !self.format_state.is_strikethrough;
+                        self.apply_format_to_active_paragraph();
+                    }
+
+                    // Text color selector
+                    egui::ComboBox::from_id_salt("text_color_combo")
+                        .selected_text(if self.format_state.text_color == Color32::from_rgb(30, 64, 175) {
+                            "네이비"
+                        } else if self.format_state.text_color == Color32::from_rgb(185, 28, 28) {
+                            "빨강"
+                        } else if self.format_state.text_color == Color32::from_rgb(4, 120, 87) {
+                            "초록"
+                        } else if self.format_state.text_color == Color32::from_rgb(124, 58, 237) {
+                            "보라"
+                        } else {
+                            "검정"
+                        })
+                        .width(55.0)
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(15, 23, 42), "검정").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.text_color = Color32::from_rgb(15, 23, 42);
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(30, 64, 175), "네이비").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.text_color = Color32::from_rgb(30, 64, 175);
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(185, 28, 28), "빨강").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.text_color = Color32::from_rgb(185, 28, 28);
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(4, 120, 87), "초록").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.text_color = Color32::from_rgb(4, 120, 87);
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.text_color == Color32::from_rgb(124, 58, 237), "보라").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.text_color = Color32::from_rgb(124, 58, 237);
+                                self.apply_format_to_active_paragraph();
+                            }
+                        });
+
+                    // Highlight (형광펜) selector
+                    egui::ComboBox::from_id_salt("highlight_combo")
+                        .selected_text(match self.format_state.highlight_color {
+                            Some(c) if c == Color32::from_rgb(254, 240, 138) => "형광:노랑",
+                            Some(c) if c == Color32::from_rgb(187, 247, 208) => "형광:연두",
+                            Some(c) if c == Color32::from_rgb(186, 230, 253) => "형광:하늘",
+                            _ => "형광펜",
+                        })
+                        .width(65.0)
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(self.format_state.highlight_color.is_none(), "없음").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.highlight_color = None;
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(254, 240, 138)), "노랑").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.highlight_color = Some(Color32::from_rgb(254, 240, 138));
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(187, 247, 208)), "연두").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.highlight_color = Some(Color32::from_rgb(187, 247, 208));
+                                self.apply_format_to_active_paragraph();
+                            }
+                            if ui.selectable_label(self.format_state.highlight_color == Some(Color32::from_rgb(186, 230, 253)), "하늘").clicked() {
+                                self.push_undo_snapshot();
+                                self.format_state.highlight_color = Some(Color32::from_rgb(186, 230, 253));
+                                self.apply_format_to_active_paragraph();
+                            }
+                        });
+
+                    // Alignment buttons (좌/중/우)
+                    if ui.selectable_label(self.format_state.align == egui::Align::LEFT, "좌").on_hover_text("왼쪽 정렬").clicked() {
+                        self.format_state.align = egui::Align::LEFT;
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.align == egui::Align::Center, "중").on_hover_text("가운데 정렬").clicked() {
+                        self.format_state.align = egui::Align::Center;
+                        self.apply_format_to_active_paragraph();
+                    }
+                    if ui.selectable_label(self.format_state.align == egui::Align::RIGHT, "우").on_hover_text("오른쪽 정렬").clicked() {
+                        self.format_state.align = egui::Align::RIGHT;
+                        self.apply_format_to_active_paragraph();
+                    }
+
+                    ui.separator();
+
+                    if ui.button("+ 새 문단").on_hover_text("새 문단 추가").clicked() {
                         self.push_undo_snapshot();
                         if let Some(doc) = &mut self.doc_model {
                             doc.paragraphs.push(DocParagraph {
@@ -1758,7 +1872,7 @@ impl StudioApp {
                             self.is_dirty = true;
                         }
                     }
-                    if ui.button("+ 표 삽입").clicked() {
+                    if ui.button("+ 표 삽입").on_hover_text("5x5 엑셀 수식 표 삽입").clicked() {
                         self.push_undo_snapshot();
                         self.table_data = vec![
                             vec!["항목".into(), "단위".into(), "수량".into(), "단가(원)".into(), "소계(원)".into()],
@@ -1771,16 +1885,16 @@ impl StudioApp {
                         self.is_dirty = true;
                         self.status_text = "본문에 5x5 엑셀 수식 연동 표 삽입 완료".to_string();
                     }
-                    if ui.button("+ 그림 삽입").clicked() {
+                    if ui.button("+ 그림 삽입").on_hover_text("고해상도 이미지 삽입").clicked() {
                         self.push_undo_snapshot();
                         let ctx = ui.ctx().clone();
                         self.insert_sample_image(&ctx);
                     }
-                    if ui.button("+ 도식 삽입").clicked() {
+                    if ui.button("+ 도식 삽입").on_hover_text("제안서 인포그래픽 도식 삽입").clicked() {
                         self.push_undo_snapshot();
                         self.status_text = "제안서 인포그래픽 도식화 캔버스 삽입 완료".to_string();
                     }
-                    if ui.button("+ 차트 삽입").clicked() {
+                    if ui.button("+ 차트 삽입").on_hover_text("26종 엑셀 벡터 차트 삽입").clicked() {
                         self.push_undo_snapshot();
                         self.chart_widget.is_visible = true;
                         let ctx = ui.ctx().clone();
@@ -1790,22 +1904,75 @@ impl StudioApp {
                     }
                 }
                 ActiveDocumentKind::Xlsx => {
-                    if ui.button("+ 행 추가").clicked() {
+                    // Cell number formatting
+                    egui::ComboBox::from_id_salt("cell_format_combo")
+                        .selected_text("서식: 일반")
+                        .width(75.0)
+                        .show_ui(ui, |ui| {
+                            if ui.selectable_label(false, "일반").clicked() {
+                                self.format_selected_cell("general");
+                            }
+                            if ui.selectable_label(false, "숫자 (1,000)").clicked() {
+                                self.format_selected_cell("number");
+                            }
+                            if ui.selectable_label(false, "통화 (₩)").clicked() {
+                                self.format_selected_cell("currency");
+                            }
+                            if ui.selectable_label(false, "백분율 (%)").clicked() {
+                                self.format_selected_cell("percent");
+                            }
+                        });
+
+                    if ui.button("₩ 통화").on_hover_text("선택 셀 통화 표기 (₩)").clicked() {
+                        self.format_selected_cell("currency");
+                    }
+                    if ui.button(", 천단위").on_hover_text("선택 셀 천단위 구분기호").clicked() {
+                        self.format_selected_cell("number");
+                    }
+
+                    ui.separator();
+
+                    if ui.button("+ 행 추가").on_hover_text("새 행 아래에 추가").clicked() {
                         self.push_undo_snapshot();
                         let col_count = self.table_data.first().map_or(4, |r| r.len());
                         self.table_data.push(vec![String::new(); col_count]);
                         self.is_dirty = true;
                     }
-                    if ui.button("+ 열 추가").clicked() {
+                    if ui.button("+ 열 추가").on_hover_text("새 열 오른쪽에 추가").clicked() {
                         self.push_undo_snapshot();
                         for row in &mut self.table_data {
                             row.push(String::new());
                         }
                         self.is_dirty = true;
                     }
+                    if ui.button("- 행 삭제").on_hover_text("마지막 행 삭제").clicked() && self.table_data.len() > 2 {
+                        self.push_undo_snapshot();
+                        self.table_data.pop();
+                        self.is_dirty = true;
+                    }
+
+                    ui.separator();
+
+                    if ui.button("∑ 합계 (SUM)").on_hover_text("선택 열 합계 자동 계산 및 행 추가").clicked() {
+                        self.calculate_selected_column_sum();
+                    }
+                    if ui.button("x̄ 평균 (AVG)").on_hover_text("선택 열 평균 계산").clicked() {
+                        self.calculate_selected_column_average();
+                    }
+
+                    ui.separator();
+
+                    if ui.button("+ 26종 차트 생성").on_hover_text("시트 데이터 기반 26종 벡터 차트 생성").clicked() {
+                        self.push_undo_snapshot();
+                        self.chart_widget.is_visible = true;
+                        let ctx = ui.ctx().clone();
+                        self.chart_widget.rebuild_from_table(&ctx, &self.table_data, self.theme == StudioTheme::Dark);
+                        self.is_dirty = true;
+                        self.status_text = "스프레드시트 연동 26종 벡터 차트 생성 완료".to_string();
+                    }
                 }
                 ActiveDocumentKind::Pptx => {
-                    if ui.button("+ 새 슬라이드").clicked() {
+                    if ui.button("+ 새 슬라이드").on_hover_text("새 슬라이드 추가").clicked() {
                         self.push_undo_snapshot();
                         if let Some(pres) = &mut self.presentation_model {
                             let n = pres.slides.len() + 1;
@@ -1819,11 +1986,134 @@ impl StudioApp {
                             self.is_dirty = true;
                         }
                     }
+                    if ui.button("슬라이드 복제").on_hover_text("현재 슬라이드 복제").clicked() {
+                        self.push_undo_snapshot();
+                        if let Some(pres) = &mut self.presentation_model
+                            && let Some(cur) = pres.slides.get(pres.active_slide_index).cloned()
+                        {
+                            let mut dup = cur;
+                            dup.slide_number = pres.slides.len() + 1;
+                            dup.title = format!("{} (사본)", dup.title);
+                            pres.slides.push(dup);
+                            pres.active_slide_index = pres.slides.len() - 1;
+                            self.is_dirty = true;
+                        }
+                    }
+                    if ui.button("- 슬라이드 삭제").on_hover_text("현재 슬라이드 삭제").clicked() {
+                        self.push_undo_snapshot();
+                        if let Some(pres) = &mut self.presentation_model
+                            && pres.slides.len() > 1
+                        {
+                            pres.slides.remove(pres.active_slide_index);
+                            if pres.active_slide_index >= pres.slides.len() {
+                                pres.active_slide_index = pres.slides.len().saturating_sub(1);
+                            }
+                            self.is_dirty = true;
+                        }
+                    }
+
+                    ui.separator();
+
+                    // Template Switcher dropdown
+                    if let Some(pres) = &mut self.presentation_model
+                        && let Some(slide) = pres.slides.get_mut(pres.active_slide_index)
+                    {
+                        let cur_template_name = match slide.template_id.as_str() {
+                            "problem-comparison-to-solution" => "비교 카드",
+                            "showcase-highlight" => "쇼케이스",
+                            "kpi-summary-3col" => "3열 KPI",
+                            "step-process-pipeline" => "파이프라인",
+                            "as-is-to-be-transformation" => "AS-IS / TO-BE",
+                            "layered-architecture-stack" => "계층형 스택",
+                            "gantt-schedule-roadmap" => "로드맵 일정",
+                            "swot-analysis-matrix" => "SWOT 매트릭스",
+                            _ => "도식 템플릿",
+                        };
+                        egui::ComboBox::from_id_salt("pptx_template_combo")
+                            .selected_text(cur_template_name)
+                            .width(95.0)
+                            .show_ui(ui, |ui| {
+                                for (tid, tname) in [
+                                    ("problem-comparison-to-solution", "비교 카드"),
+                                    ("showcase-highlight", "쇼케이스"),
+                                    ("kpi-summary-3col", "3열 KPI"),
+                                    ("step-process-pipeline", "파이프라인"),
+                                    ("as-is-to-be-transformation", "AS-IS / TO-BE"),
+                                    ("layered-architecture-stack", "계층형 스택"),
+                                    ("gantt-schedule-roadmap", "로드맵 일정"),
+                                    ("swot-analysis-matrix", "SWOT 매트릭스"),
+                                ] {
+                                    if ui.selectable_label(slide.template_id == tid, tname).clicked() {
+                                        slide.template_id = tid.to_string();
+                                    }
+                                }
+                            });
+                    }
+
+                    ui.separator();
+
+                    if ui.button("+ 도식 캔버스").on_hover_text("인라인 도식화 캔버스 토글").clicked() {
+                        self.status_text = "슬라이드 인포그래픽 도식화 캔버스 연결".to_string();
+                    }
                 }
                 ActiveDocumentKind::Pdf => {
-                    if ui.button("전자직인 날인").clicked() {
+                    let cur_p = self.pdf_widget.current_page;
+                    let total_p = self.pdf_widget.session.as_ref().map_or(1, |s| s.page_count());
+
+                    let prev_btn = ui.add_enabled(cur_p > 0, egui::Button::new("◀ 이전"));
+                    if prev_btn.on_hover_text("이전 페이지로 이동").clicked() {
+                        self.pdf_widget.current_page = cur_p.saturating_sub(1);
+                        let ctx = ui.ctx().clone();
+                        self.pdf_widget.refresh_page_texture(&ctx);
+                    }
+
+                    ui.label(RichText::new(format!("페이지 {} / {}", cur_p + 1, total_p)).strong());
+
+                    let next_btn = ui.add_enabled(cur_p + 1 < total_p, egui::Button::new("다음 ▶"));
+                    if next_btn.on_hover_text("다음 페이지로 이동").clicked() {
+                        self.pdf_widget.current_page = (cur_p + 1).min(total_p.saturating_sub(1));
+                        let ctx = ui.ctx().clone();
+                        self.pdf_widget.refresh_page_texture(&ctx);
+                    }
+
+                    ui.separator();
+
+                    if ui.button("- 축소").on_hover_text("축소").clicked() && self.pdf_widget.zoom_scale > 0.5 {
+                        self.pdf_widget.zoom_scale -= 0.25;
+                        let ctx = ui.ctx().clone();
+                        self.pdf_widget.refresh_page_texture(&ctx);
+                    }
+                    if ui.button(format!("{:.0}%", self.pdf_widget.zoom_scale * 100.0)).on_hover_text("100% 표준 배율 복원").clicked() {
+                        self.pdf_widget.zoom_scale = 1.0;
+                        let ctx = ui.ctx().clone();
+                        self.pdf_widget.refresh_page_texture(&ctx);
+                    }
+                    if ui.button("+ 확대").on_hover_text("확대").clicked() && self.pdf_widget.zoom_scale < 2.5 {
+                        self.pdf_widget.zoom_scale += 0.25;
+                        let ctx = ui.ctx().clone();
+                        self.pdf_widget.refresh_page_texture(&ctx);
+                    }
+
+                    ui.separator();
+
+                    if ui.button("(인) 앵커 자동 날인").on_hover_text("문서 내 (인) 및 서명란 텍스트 자동 탐색 날인").clicked() {
+                        if let Err(e) = self.pdf_widget.auto_stamp_anchor() {
+                            self.status_text = e;
+                        } else {
+                            self.is_dirty = true;
+                            self.status_text = "앵커 위치에 전자직인을 자동 날인했습니다.".to_string();
+                        }
+                    }
+                    if ui.button("대표이사 직인 날인").on_hover_text("투명 배경 전자직인 날인").clicked() {
                         let _ = self.pdf_widget.stamp_seal_at(200.0, 700.0);
                         self.is_dirty = true;
+                        self.status_text = "지정 위치에 대표이사 직인을 날인했습니다.".to_string();
+                    }
+                    let can_undo = self.pdf_widget.layer_stack.can_undo();
+                    let undo_sig_btn = ui.add_enabled(can_undo, egui::Button::new("서명 취소"));
+                    if undo_sig_btn.on_hover_text("가장 최근 날인된 직인/서명 취소").clicked() {
+                        self.pdf_widget.layer_stack.undo();
+                        self.status_text = "최근 날인 서명을 취소했습니다.".to_string();
                     }
                 }
             }
@@ -1931,9 +2221,65 @@ impl StudioApp {
                     .color(Color32::GRAY),
             );
 
+            ui.separator();
+
+            match self.active_doc {
+                ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
+                    let p_count = self.doc_model.as_ref().map_or(0, |m| m.paragraphs.len());
+                    let char_count: usize = self.doc_model.as_ref().map_or(0, |m| {
+                        m.paragraphs.iter().map(|p| p.text.chars().count()).sum()
+                    });
+                    ui.label(
+                        RichText::new(format!("문단: {p_count}개 | 글자수: {char_count}자 | 확대: {}%", self.zoom_pct))
+                            .size(10.5)
+                            .color(Color32::from_rgb(100, 116, 139)),
+                    );
+                }
+                ActiveDocumentKind::Xlsx => {
+                    let (r, c) = self.table_selected_cell;
+                    let col_str = if c < 26 {
+                        ((b'A' + c as u8) as char).to_string()
+                    } else {
+                        format!("A{}", (b'A' + (c - 26) as u8) as char)
+                    };
+                    let cell_name = format!("{col_str}{}", r + 1);
+                    let rows = self.table_data.len();
+                    let cols = self.table_data.first().map_or(0, |r| r.len());
+                    let sheet_name = self.spreadsheet_model.as_ref().and_then(|s| s.sheet_names.get(s.active_sheet_index)).map(|x| x.as_str()).unwrap_or("Sheet1");
+                    ui.label(
+                        RichText::new(format!("활성 셀: [{cell_name}] | 시트: {sheet_name} | 크기: {rows}행 × {cols}열 | 확대: {}%", self.zoom_pct))
+                            .size(10.5)
+                            .color(Color32::from_rgb(100, 116, 139)),
+                    );
+                }
+                ActiveDocumentKind::Pptx => {
+                    if let Some(pres) = &self.presentation_model {
+                        let cur = pres.active_slide_index + 1;
+                        let total = pres.slides.len();
+                        let tpl = pres.slides.get(pres.active_slide_index).map(|s| s.template_id.as_str()).unwrap_or("standard");
+                        ui.label(
+                            RichText::new(format!("슬라이드: {cur} / {total} | 16:9 와이드스크린 (1280×720) | 템플릿: {tpl}"))
+                                .size(10.5)
+                                .color(Color32::from_rgb(100, 116, 139)),
+                        );
+                    }
+                }
+                ActiveDocumentKind::Pdf => {
+                    let cur = self.pdf_widget.current_page + 1;
+                    let total = self.pdf_widget.session.as_ref().map_or(1, |s| s.page_count());
+                    let sig_count = self.pdf_widget.layer_stack.signatures().len();
+                    let zoom = (self.pdf_widget.zoom_scale * 100.0) as u32;
+                    ui.label(
+                        RichText::new(format!("페이지: {cur} / {total} | 표준 A4 (595×842 pt) | 서명: {sig_count}건 | 배율: {zoom}%"))
+                            .size(10.5)
+                            .color(Color32::from_rgb(100, 116, 139)),
+                    );
+                }
+            }
+
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                 ui.label(
-                    RichText::new("Zero Panic · unsafe_code = forbid")
+                    RichText::new("Zero Panic · unsafe_code = forbid · v0.1.0")
                         .monospace()
                         .size(10.0)
                         .color(Color32::from_rgb(100, 116, 139)),
