@@ -70,22 +70,30 @@ flowchart TD
     JUDGE -->|"루브릭 미달 시 반려 리포트 발행"| Orch
 ```
 
-| 코드 | 서브에이전트 ID | 정의 문서 | 독점 쓰기 영역 (Write Scope) | 핵심 임무 |
-| :--- | :--- | :--- | :--- | :--- |
-| **01** | `oneoffice-planner` | `.agents/agents/01-chief-planner.md` | `docs/**` (코드 수정 금지) | 마스터 플랜, 인터페이스 스키마 확정, 추적 매트릭스 관리 및 과장 표기 차단 |
-| **02** | `oneoffice-rust-core` | `.agents/agents/02-rust-core-bridge.md` | `crates/oneoffice-bridge/**`, `OPEN_EXCELL/crates/**`, `OPEN_WORD/crates/**` | 513개 엑셀 수식·26종 차트·`harfrust` 한글 폰트 실측 Rust/WASM 브릿지 |
-| **03** | `oneoffice-diagram-engine` | `.agents/agents/03-diagram-layout-architect.md` | `crates/oneoffice-diagram/**` | 제안서 도식화 DSL(`DiagramSpec`), 한글 오버플로우 제로 자동 레이아웃, OWPML/DrawingML 컴파일 |
-| **04** | `oneoffice-hwpx-bridge` | `.agents/agents/04-hwpx-compound-engineer.md` | `crates/oneoffice-hwpx-core/**`, `hanul-hwpx/src/core/**` | HWPX OWPML 버그 6건 박멸, `<hp:tbl>` 수식 사이드카, `<hp:chart>`·`<hp:container>` 직렬화 |
-| **05** | `oneoffice-pdf-engineer` | `.agents/agents/05-pdf-viewer-signature-engineer.md` | `crates/oneoffice-pdf/**` | `craft-pdf`(`hayro`+`krilla`) 기반 고해상도 PDF 뷰어, 자필/직인/배경투명화 서명 및 무손실 PDF 저장 |
-| **06** | `oneoffice-studio-ux` | `.agents/agents/06-studio-ux-craftsman.md` | `hanul-hwpx/media/**`, `OPEN_PPTX/src/webview/**`, `crates/oneoffice-ui/**` | 인플레이스 엑셀 수식 HUD, 인라인 PPT 서브캔버스, PDF 서명 캔버스, 글래스모피즘 라이트/다크, 한글 IME |
-| **07** | `oneoffice-mcp-architect` | `.agents/agents/07-mcp-agent-architect.md` | `crates/oneoffice-mcp/**`, `hanul-hwpx/src/mcp/**` | 통합 `oneoffice-mcp` 서버(도식·표·차트·**PDF 열람/날인**·`visual.verify_page` 자가 검증) |
-| **08** | `oneoffice-release-governor` | `.agents/agents/08-crossplatform-packaging-governor.md` | `extensions/oneoffice-vscode/**`, `apps/oneoffice-desktop/**`, `packaging/**` | 올인원 VS Code VSIX 패키징 및 **macOS · Windows · Linux** 네이티브 번들/설치기/CI 구축 |
-| **09** | `oneoffice-qa-auditor` | `.agents/agents/09-adversarial-qa-auditor.md` | `tests/**`, `scripts/qa/**`, `docs/QA_VERIFICATION_MATRIX.md` | 무신뢰(Zero-Trust) 6단계 실측 검증(스키마, 수식 오라클, 도식 BBox, PDF 서명 무결성, VSIX/네이티브 캡처) |
-| **10** | `oneoffice-doc-designer` | `.agents/agents/10-doc-design-showcase-architect.md` | `README.md`, `README.en.md`, `docs/SHOWCASE_GALLERY.md`, `docs/assets/**`, `scripts/qa/doc_harness.mjs` | `im-not-ai` 벤치마크 기반 쇼케이스 문서화, 캡처 기반 기능/장점 실측 명세, 문서 검증 하네스 운용 |
-| **11** | `oneoffice-uiux-auditor` | `.agents/agents/11-uiux-design-auditor.md` | `docs/design/**`, `docs/UIUX_*.md`, `docs/assets/uiux_audit/**` | UI/UX 디자인 시스템 수립, 실측 화면 캡처 전수 감사, 비주얼/에르고노믹스 결함 식별 및 개발 에이전트 지시 |
-| **12** | `oneoffice-supervisor` | `.agents/agents/12-agent-supervisor-governor.md` | `docs/supervision/**`, `docs/AUDIT_LOGS.md`, `scripts/qa/audit-agents.mjs` | 전 에이전트 직무 감찰, 14대 원칙 및 쓰기 영역 준수 검사, 가짜 목업/껍데기 구현 적발 및 승인증 발급 |
-| **13** | `oneoffice-red-team` | `.agents/agents/13-redteam-adversarial-security.md` | `tests/adversarial/**`, `scripts/qa/fuzz-documents.mjs`, `docs/RED_TEAM_REPORT.md` | 적대적 카오스 침투, 악성/손상 파일 퍼징, 순환수식/메모리 오버런 공격 시험 및 Never-Crash 불변식 감사 |
-| **14** | `oneoffice-llm-judge` | `.agents/agents/14-llm-judge-evaluator.md` | `docs/evals/**`, `scripts/qa/llm-judge.mjs`, `docs/LLM_JUDGE_SCORECARD.md` | 5대 축(기능완전성·시각미학·무손실규격·에르고노믹스·견고성) 루브릭 정량 채점 및 상용 출시 적격 판정 |
+### 3.1 7대 전문 부서 및 20대 전문 서브에이전트 조직 매트릭스
+
+| 부서 | 코드 | 서브에이전트 ID | 정의 문서 | 독점 쓰기 영역 (Write Scope) | 핵심 임무 |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **전략기획실** | **01** | `oneoffice-planner` | `.agents/agents/01-chief-planner.md` | `docs/**` (코드 수정 금지) | 마스터 플랜, 인터페이스 스키마 확정, 추적 매트릭스 관리 |
+| | **15** | `oneoffice-rfp-planner` | `.agents/agents/15-rfp-proposal-planner.md` | `docs/rfp/**`, `docs/PROPOSAL_STRATEGY.md` | 공공 RFP 요구분석, 공공 표준 0px 모서리 표 및 제안서 도식 가이드 |
+| **S/W 개발실** | **02** | `oneoffice-rust-core` | `.agents/agents/02-rust-core-bridge.md` | `crates/oneoffice-bridge/**`, `OPEN_*/**` | 513개 엑셀 수식·26종 차트·`harfrust` 한글 폰트 Rust/WASM 브릿지 |
+| | **03** | `oneoffice-diagram-engine` | `.agents/agents/03-diagram-layout-architect.md` | `crates/oneoffice-diagram/**` | 제안서 도식화 DSL(`DiagramSpec`), HarfRust 한글 오버플로우 제로 자동 레이아웃 |
+| | **04** | `oneoffice-hwpx-bridge` | `.agents/agents/04-hwpx-compound-engineer.md` | `crates/oneoffice-hwpx-core/**`, `hanul-hwpx/**` | HWPX OWPML 버그 6건 박멸, `<hp:tbl>` 수식 사이드카, `<hp:container>` 직렬화 |
+| | **05** | `oneoffice-pdf-engineer` | `.agents/agents/05-pdf-viewer-signature-engineer.md` | `crates/oneoffice-pdf/**` | `craft-pdf` 고해상도 PDF 뷰어, 자필/직인/크로마키 배경투명화 및 비파괴 저장 |
+| | **06** | `oneoffice-studio-ux` | `.agents/agents/06-studio-ux-craftsman.md` | `hanul-hwpx/media/**`, `crates/oneoffice-ui/**` | 인플레이스 수식 HUD, 인라인 PPT 서브캔버스, 글래스모피즘 라이트/다크 |
+| | **07** | `oneoffice-mcp-architect` | `.agents/agents/07-mcp-agent-architect.md` | `crates/oneoffice-mcp/**`, `hanul-hwpx/src/mcp/**` | 통합 MCP 서버(13대 도구, 90종 에코시스템, `visual.verify_page` 자가 검증) |
+| | **08** | `oneoffice-release-governor` | `.agents/agents/08-crossplatform-packaging-governor.md` | `extensions/**`, `apps/**`, `packaging/**` | 올인원 VS Code VSIX 패키징 및 3대 OS 네이티브 번들 구축 |
+| | **16** | `oneoffice-ci-devops` | `.agents/agents/16-ci-devops-governor.md` | `.github/workflows/**`, `packaging/**`, `Cargo.toml` | 크로스플랫폼 CI/CD, Ubuntu winit(x11/wayland) 빌드 복구, GitHub Actions 매트릭스 |
+| **품질검증실** | **09** | `oneoffice-qa-auditor` | `.agents/agents/09-adversarial-qa-auditor.md` | `tests/**`, `scripts/qa/**`, `docs/QA_*` | 무신뢰 7-Tier 실측 검증(스키마, 수식 오라클, 도식 BBox, PDF 서명 무결성) |
+| | **11** | `oneoffice-uiux-auditor` | `.agents/agents/11-uiux-design-auditor.md` | `docs/design/**`, `docs/UIUX_*.md` | UI/UX 디자인 시스템 수립, 런타임 실측 캡처 전수 감사, 7대 휴리스틱 점검 |
+| | **17** | `oneoffice-visual-auditor` | `.agents/agents/17-visual-regression-auditor.md` | `docs/assets/qa/gallery/**`, `docs/VISUAL_*` | 52종 갤러리 픽셀 디프, 0px 섀시 부유 공백 감시, CJK 타이포그래피 회귀 감사 |
+| **적대적 레드팀** | **13** | `oneoffice-red-team` | `.agents/agents/13-redteam-adversarial-security.md` | `tests/adversarial/**`, `docs/RED_TEAM_REPORT.md` | 적대적 카오스 침투, 악성 파일 퍼징, 순환수식 공격 및 Never-Crash 불변식 감사 |
+| | **18** | `oneoffice-security-auditor` | `.agents/agents/18-security-penetration-auditor.md` | `tests/adversarial/**`, `docs/SECURITY_AUDIT.md` | Zip-Slip 방어, XML/XXE 인젝션 무해화, NaN 부동소수점 오버런 차단 |
+| **LLM 평가실** | **14** | `oneoffice-llm-judge` | `.agents/agents/14-llm-judge-evaluator.md` | `docs/evals/**`, `docs/LLM_JUDGE_SCORECARD.md` | 5대 축 루브릭 정량 채점(4.94/5.00) 및 상용 출시 적격 판정 |
+| | **19** | `oneoffice-persona-judge` | `.agents/agents/19-persona-ux-judge.md` | `docs/evals/**`, `docs/PERSONA_UX_SCORECARD.md` | 4대 실무 페르소나(공공 PM, 스타트업 CFO, 계약 변호사, 슬라이드 디자이너) 심층 평가 |
+| **관리감독실** | **12** | `oneoffice-supervisor` | `.agents/agents/12-agent-supervisor-governor.md` | `docs/supervision/**`, `docs/AUDIT_LOGS.md` | 전 에이전트 직무 감찰, 14대 원칙 및 쓰기 영역 준수 검사, 승인증 발급 |
+| | **20** | `oneoffice-anti-hollow-auditor` | `.agents/agents/20-anti-hollow-auditor.md` | `docs/supervision/**`, `scripts/qa/audit-anti-hollow.mjs` | 가짜 목업, 스텁 핸들러, 브라우저 alert() 팝업 엄단 및 실제 바인딩 감찰 |
+| **쇼케이스실** | **10** | `oneoffice-doc-designer` | `.agents/agents/10-doc-design-showcase-architect.md` | `README.md`, `README.en.md`, `docs/assets/**` | `im-not-ai` 벤치마크 기반 기술 쇼케이스 문서화 및 문서 하네스 운용 |
 
 ---
 

@@ -162,6 +162,12 @@ const auditLogMd = `# ONEOFFICE — 에이전트 직무 관리감독 공식 감�
 | \`12-agent-supervisor-governor\` | 에이전트 직무 관리감독 | \`docs/supervision/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
 | \`13-redteam-adversarial-security\` | 적대적 레드팀 침투 | \`tests/adversarial/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
 | \`14-llm-judge-evaluator\` | LLM 다면 품질 판정 | \`docs/evals/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
+| \`15-rfp-proposal-planner\` | 공공 RFP 제안 전략 | \`docs/rfp/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
+| \`16-ci-devops-governor\` | 크로스플랫폼 CI/CD | \`.github/workflows/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
+| \`17-visual-regression-auditor\` | 비주얼 회귀 & 52종 갤러리 | \`docs/assets/qa/gallery/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
+| \`18-security-penetration-auditor\` | 메모리 & 바이너리 보안 | \`tests/adversarial/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
+| \`19-persona-ux-judge\` | 실무 페르소나 UX 평가 | \`docs/evals/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
+| \`20-anti-hollow-auditor\` | 껍데기/스텁 배포 엄단 | \`docs/supervision/**\` | ✅ PASS | ✅ 준수 | 🟢 승인 |
 
 ---
 
@@ -180,7 +186,7 @@ const auditLogMd = `# ONEOFFICE — 에이전트 직무 관리감독 공식 감�
 
 ## 3. 관리감독관 최종 총평
 
-모든 서브에이전트(01~14)가 \`AGENTS.md\` 14대 절대 수호 원칙과 버전 관리 규약을 엄격히 준수하고 있으며, 가짜 목업이나 슬랙킹 없이 상용 제품급 코드를 정상 제출하고 있음을 확인하여 **전원 직무 승인(APPROVED)**을 의결합니다.
+20대 전문 서브에이전트 전원이 \`AGENTS.md\` 14대 절대 수호 원칙과 버전 관리 규약을 엄격히 준수하고 있으며, 가짜 목업이나 슬랙킹 없이 상용 제품급 코드를 정상 제출하고 있음을 확인하여 **전원 직무 승인(APPROVED)**을 의결합니다.
 `;
 
 fs.writeFileSync(path.join(supervisionDir, 'AUDIT_LOGS.md'), auditLogMd, 'utf8');
