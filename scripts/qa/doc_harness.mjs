@@ -174,7 +174,7 @@ function auditDocument(filePath) {
     { label: "Why ONEOFFICE (Problem & Solution)", pattern: /(##.*(왜\s*oneoffice인가|Why\s*ONEOFFICE|Problem\s*&\s*Solution))/i },
     { label: "Prime Directives (핵심 철칙)", pattern: /(##.*(핵심\s*철칙|Prime\s*Directives))/i },
     { label: "System Architecture & Pipeline", pattern: /(##.*(아키텍처|Architecture)|```mermaid[\s\S]*?flowchart)/i },
-    { label: "10/14 Specialized Sub-Agents", pattern: /(10대|14대|10\s*Specialized|14\s*Specialized|oneoffice-doc-designer)/i },
+    { label: "10/14 Specialized Sub-Agents", pattern: /(10대|14대|20대|10\s*Specialized|14\s*Specialized|20\s*Specialized|oneoffice-doc-designer)/i },
     { label: "6/7-Tier Verification Gates", pattern: /(6단계|7단계|6-Tier|7-Tier|Verification\s*Gates)/i },
   ];
 
