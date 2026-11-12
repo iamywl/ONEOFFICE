@@ -246,4 +246,30 @@ mod tests {
         assert_eq!(inspect_parsed["page_count"], 1);
         assert!(inspect_parsed["signing_anchors_count"].as_u64().unwrap() >= 1);
     }
+
+    #[test]
+    fn test_tool_chart_upsert() {
+        let args = json!({
+            "spec": {
+                "kind": "ColumnClustered",
+                "categories": ["2023", "2024", "2025", "2026"],
+                "series": [
+                    {
+                        "name": "연간매출액",
+                        "values": [120.0, 250.0, 480.0, 950.0]
+                    }
+                ],
+                "width_pt": 480.0,
+                "height_pt": 260.0
+            }
+        });
+        let result = call_tool("oneoffice.chart.upsert", &args).expect("chart upsert failed");
+        assert!(!result.is_error);
+        let parsed: serde_json::Value = serde_json::from_str(&result.content[0].text).unwrap();
+        assert_eq!(parsed["success"], true);
+        assert!(parsed["svg"].as_str().unwrap().contains("<svg"));
+        assert!(!parsed["png_base64"].as_str().unwrap().is_empty());
+        assert!(parsed["ooxml_chart_xml"].as_str().unwrap().contains("<c:chartSpace"));
+        assert!(!parsed["xlsx_base64"].as_str().unwrap().is_empty());
+    }
 }
