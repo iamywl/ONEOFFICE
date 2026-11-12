@@ -47,7 +47,12 @@
 | `oneoffice.pdf.find_anchors` | `{ path, query: "(인)" \| "서명" \| string }` | 일치하는 모든 텍스트의 `{ page, text, bboxPt: [x, y, w, h] }` 좌표 배열 반환 |
 | `oneoffice.pdf.sign` | `{ path, outputPath, placement: { page, rectPt } \| { anchorText, offsetPt? }, stamp: { imagePath, removeWhiteBg?: boolean } \| { svgPath } \| { textStamp } }` | 비파괴 증분 업데이트로 서명/직인을 합성 저장하고 날인된 페이지 프리뷰 PNG 경로 및 검증 상태 반환 |
 
-### 2.5 폐루프 비주얼 자가 검증 (`oneoffice.visual.verify_page`)
+### 2.5 엑셀 513 수식 단독 평가 (`oneoffice.calc.eval`)
+| 도구명 | 주요 입력 파라미터 | 동작 및 반환값 |
+| :--- | :--- | :--- |
+| `oneoffice.calc.eval` | `{ formula: string }` | GridCraft 513개 엑셀 함수 엔진을 통해 임의의 수식(`=SUM(100, 250, 400)`, `=NPV(...)`, `=XLOOKUP(...)`)을 단독 평가하고 결과 문자열 및 엔진 지원 함수 수 반환 |
+
+### 2.6 폐루프 비주얼 자가 검증 (`oneoffice.visual.verify_page`)
 AI 에이전트가 문서를 사용자에게 전달하기 전 **반드시 호출해야 하는 품질 게이트 도구**입니다:
 - **입력**: `{ path, pageOrSlide: number, dpi?: 144 | 216, checkContrast?: boolean }`
 - **출력**:

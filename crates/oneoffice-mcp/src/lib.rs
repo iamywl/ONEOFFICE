@@ -67,7 +67,7 @@ mod tests {
         assert!(resp.error.is_none());
         let res = resp.result.unwrap();
         let tools = res["tools"].as_array().unwrap();
-        assert_eq!(tools.len(), 7);
+        assert_eq!(tools.len(), 13);
 
         let names: Vec<&str> = tools
             .iter()
@@ -75,10 +75,16 @@ mod tests {
             .collect();
         assert!(names.contains(&"oneoffice.doc.create"));
         assert!(names.contains(&"oneoffice.doc.inspect"));
+        assert!(names.contains(&"oneoffice.doc.convert"));
+        assert!(names.contains(&"oneoffice.doc.fill_fields"));
+        assert!(names.contains(&"oneoffice.diagram.list_templates"));
         assert!(names.contains(&"oneoffice.diagram.compose"));
+        assert!(names.contains(&"oneoffice.diagram.patch"));
         assert!(names.contains(&"oneoffice.table.upsert"));
         assert!(names.contains(&"oneoffice.chart.upsert"));
+        assert!(names.contains(&"oneoffice.pdf.find_anchors"));
         assert!(names.contains(&"oneoffice.pdf.sign"));
+        assert!(names.contains(&"oneoffice.calc.eval"));
         assert!(names.contains(&"oneoffice.visual.verify_page"));
     }
 
@@ -271,5 +277,138 @@ mod tests {
         assert!(!parsed["png_base64"].as_str().unwrap().is_empty());
         assert!(parsed["ooxml_chart_xml"].as_str().unwrap().contains("<c:chartSpace"));
         assert!(!parsed["xlsx_base64"].as_str().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_tool_diagram_list_templates() {
+        let args = json!({});
+        let res = call_tool("oneoffice.diagram.list_templates", &args).expect("list templates failed");
+        assert!(!res.is_error);
+        let parsed: serde_json::Value = serde_json::from_str(&res.content[0].text).unwrap();
+        assert_eq!(parsed["success"], true);
+        assert_eq!(parsed["total_count"], 10);
+        let tmpls = parsed["templates"].as_array().unwrap();
+        assert_eq!(tmpls.len(), 10);
+
+        // Filter by category
+        let filter_args = json!({ "category": "strategy" });
+        let filter_res = call_tool("oneoffice.diagram.list_templates", &filter_args).expect("filter templates failed");
+        assert!(!filter_res.is_error);
+        let filter_parsed: serde_json::Value = serde_json::from_str(&filter_res.content[0].text).unwrap();
+        assert!(filter_parsed["total_count"].as_u64().unwrap() >= 2);
+    }
+
+    #[test]
+    fn test_tool_diagram_patch() {
+        let tmpl = oneoffice_diagram::instantiate_template("problem-comparison-to-solution").unwrap();
+        let spec_json = serde_json::to_value(&tmpl).unwrap();
+        let patch_args = json!({
+            "spec": spec_json,
+            "patch": {
+                "title": "패치된 솔루션 원페이저"
+            }
+        });
+        let res = call_tool("oneoffice.diagram.patch", &patch_args).expect("patch failed");
+        assert!(!res.is_error);
+        let parsed: serde_json::Value = serde_json::from_str(&res.content[0].text).unwrap();
+        assert_eq!(parsed["success"], true);
+        assert_eq!(parsed["updated_spec"]["title"], "패치된 솔루션 원페이저");
+        assert!(parsed["svg"].as_str().unwrap().contains("<svg"));
+    }
+
+    #[test]
+    fn test_tool_pdf_find_anchors() {
+        let contract_pdf = oneoffice_pdf::generate_sample_korean_contract_pdf()
+            .expect("contract generation failed");
+        let pdf_b64 = BASE64.encode(&contract_pdf);
+
+        let args = json!({
+            "pdf_base64": pdf_b64,
+            "query": "(인)"
+        });
+        let res = call_tool("oneoffice.pdf.find_anchors", &args).expect("find anchors failed");
+        assert!(!res.is_error);
+        let parsed: serde_json::Value = serde_json::from_str(&res.content[0].text).unwrap();
+        assert_eq!(parsed["success"], true);
+        assert!(parsed["total_matches"].as_u64().unwrap() >= 1);
+        let anchors = parsed["anchors"].as_array().unwrap();
+        assert!(!anchors.is_empty());
+        assert_eq!(anchors[0]["text"], "(인)");
+    }
+
+    #[test]
+    fn test_tool_doc_fill_fields() {
+        let hwpx = oneoffice_hwpx_core::HwpxPackage::create_minimal_hwpx(
+            "계약서 템플릿",
+            "수신: {{RECIPIENT_NAME}} 귀하\n프로젝트명: {{PROJECT_TITLE}}\n예산: {{BUDGET}}"
+        ).expect("create minimal failed");
+        let hwpx_bytes = hwpx.to_bytes().expect("serialize failed");
+        let hwpx_b64 = BASE64.encode(&hwpx_bytes);
+
+        let args = json!({
+            "data_base64": hwpx_b64,
+            "format": "hwpx",
+            "fields": {
+                "RECIPIENT_NAME": "홍길동",
+                "PROJECT_TITLE": "차세대 오피스 고도화",
+                "BUDGET": "50,000,000원"
+            }
+        });
+        let res = call_tool("oneoffice.doc.fill_fields", &args).expect("fill fields failed");
+        assert!(!res.is_error);
+        let parsed: serde_json::Value = serde_json::from_str(&res.content[0].text).unwrap();
+        assert_eq!(parsed["success"], true);
+        assert_eq!(parsed["fields_applied_count"], 3);
+        let updated_b64 = parsed["document_base64"].as_str().unwrap();
+        assert!(!updated_b64.is_empty());
+
+        // Verify with inspect
+        let inspect_res = call_tool("oneoffice.doc.inspect", &json!({ "data_base64": updated_b64 })).unwrap();
+        let inspect_parsed: serde_json::Value = serde_json::from_str(&inspect_res.content[0].text).unwrap();
+        assert_eq!(inspect_parsed["format"], "hwpx");
+    }
+
+    #[test]
+    fn test_tool_doc_convert() {
+        let md = "# 제안서 제목\n\n첫 번째 문단입니다.\n\n두 번째 결론 문단입니다.";
+        let md_b64 = BASE64.encode(md.as_bytes());
+
+        // MD -> HWPX
+        let convert_hwpx_args = json!({
+            "data_base64": md_b64,
+            "from_format": "md",
+            "to_format": "hwpx"
+        });
+        let hwpx_res = call_tool("oneoffice.doc.convert", &convert_hwpx_args).expect("convert to hwpx failed");
+        assert!(!hwpx_res.is_error);
+        let hwpx_parsed: serde_json::Value = serde_json::from_str(&hwpx_res.content[0].text).unwrap();
+        assert_eq!(hwpx_parsed["success"], true);
+        let hwpx_b64 = hwpx_parsed["output_base64"].as_str().unwrap();
+
+        // HWPX -> PDF
+        let convert_pdf_args = json!({
+            "data_base64": hwpx_b64,
+            "from_format": "hwpx",
+            "to_format": "pdf"
+        });
+        let pdf_res = call_tool("oneoffice.doc.convert", &convert_pdf_args).expect("convert to pdf failed");
+        assert!(!pdf_res.is_error);
+        let pdf_parsed: serde_json::Value = serde_json::from_str(&pdf_res.content[0].text).unwrap();
+        assert_eq!(pdf_parsed["success"], true);
+        assert_eq!(pdf_parsed["mime_type"], "application/pdf");
+        assert!(!pdf_parsed["output_base64"].as_str().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_tool_calc_eval() {
+        let args = json!({
+            "formula": "=SUM(100, 250, 400)"
+        });
+        let res = call_tool("oneoffice.calc.eval", &args).expect("calc eval failed");
+        assert!(!res.is_error);
+        let parsed: serde_json::Value = serde_json::from_str(&res.content[0].text).unwrap();
+        assert_eq!(parsed["success"], true);
+        assert_eq!(parsed["evaluated_result"], "750");
+        assert!(parsed["engine_supported_functions_count"].as_u64().unwrap() >= 513);
     }
 }

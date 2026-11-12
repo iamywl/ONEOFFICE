@@ -111,7 +111,7 @@ fn test_stdio_e2e_jsonrpc_pipeline() {
     let r2: Value = serde_json::from_str(lines[1]).unwrap();
     assert_eq!(r2["id"], 2);
     let tools = r2["result"]["tools"].as_array().unwrap();
-    assert_eq!(tools.len(), 7);
+    assert_eq!(tools.len(), 13);
 
     // 3. Verify diagram.compose response
     let r3: Value = serde_json::from_str(lines[2]).unwrap();

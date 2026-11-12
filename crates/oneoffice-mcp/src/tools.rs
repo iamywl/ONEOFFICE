@@ -4,21 +4,23 @@ use std::sync::Arc;
 
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as BASE64;
+use oneoffice_bridge::calc::{CalcTableEngine, CalcTableSpec, CellInput};
 use oneoffice_bridge::chart::{ChartSpecInput, UnifiedChartEngine};
-use oneoffice_bridge::calc::{CalcTableEngine, CalcTableSpec};
 use oneoffice_diagram::{
     compile_drawingml, compile_owpml, compile_png, compile_svg, instantiate_template,
-    patch_diagram, solve_layout, DiagramPatch, DiagramSpec,
+    list_diagram_templates, patch_diagram, solve_layout, DiagramPatch, DiagramSpec,
 };
-use oneoffice_hwpx_core::compound::build_hwpx_table_xml;
+use oneoffice_hwpx_core::compound::{build_hwpx_table_xml, replace_fields_in_section};
 use oneoffice_hwpx_core::{
     embed_diagram_into_section, embed_table_into_section, HwpxPackage, HwpxTableFormulaSidecar,
 };
 use oneoffice_pdf::{
-    PdfDocumentSession, PlacedSignature, SignatureLayerStack, SignaturePayload,
-    generate_cleanroom_seal_on_white_paper_png, remove_white_background, save_pdf_with_signatures,
+    generate_cleanroom_seal_on_white_paper_png, generate_document_pdf,
+    remove_white_background, save_pdf_with_signatures, PdfDocumentSession,
+    PlacedSignature, SignatureLayerStack, SignaturePayload,
 };
 use serde_json::{json, Value};
+use zip::write::SimpleFileOptions;
 
 use crate::error::McpError;
 use crate::protocol::{McpToolInfo, McpToolResult};
@@ -153,6 +155,78 @@ pub fn list_tools() -> Vec<McpToolInfo> {
                 }
             }),
         },
+        McpToolInfo {
+            name: "oneoffice.doc.convert".to_string(),
+            description: "Converts documents between HWPX, DOCX, Markdown, and high-DPI vector PDF with Korean typography preservation.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "required": ["data_base64", "from_format", "to_format"],
+                "properties": {
+                    "data_base64": { "type": "string", "description": "Base64 encoded input document bytes" },
+                    "from_format": { "type": "string", "enum": ["hwpx", "docx", "md"], "description": "Source format" },
+                    "to_format": { "type": "string", "enum": ["pdf", "md", "hwpx", "docx"], "description": "Target format" }
+                }
+            }),
+        },
+        McpToolInfo {
+            name: "oneoffice.doc.fill_fields".to_string(),
+            description: "Fills form fields and 누름틀 placeholders in HWPX (<hp:fieldBegin/End>, {{KEY}}) or DOCX ({{KEY}}, «KEY») without damaging sibling paragraph runs.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "required": ["data_base64", "fields"],
+                "properties": {
+                    "data_base64": { "type": "string", "description": "Base64 encoded template document bytes" },
+                    "format": { "type": "string", "enum": ["hwpx", "docx"], "description": "Document format (default: 'hwpx')" },
+                    "fields": { "type": "object", "description": "Key-value dictionary of field names and replacement text" }
+                }
+            }),
+        },
+        McpToolInfo {
+            name: "oneoffice.diagram.list_templates".to_string(),
+            description: "Lists all 10 consulting proposal infographic templates with IDs, Korean titles, categories, and recommended canvas widths.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "properties": {
+                    "category": { "type": "string", "description": "Optional category filter (e.g. 'proposal', 'process', 'strategy', 'architecture', 'roadmap', 'marketing')" }
+                }
+            }),
+        },
+        McpToolInfo {
+            name: "oneoffice.diagram.patch".to_string(),
+            description: "Incrementally updates specific nodes, KPI metrics, body bullets, colors, or connectors in an existing DiagramSpec and recompiles layout.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "required": ["spec", "patch"],
+                "properties": {
+                    "spec": { "type": "object", "description": "DiagramSpec JSON definition to patch" },
+                    "patch": { "type": "object", "description": "DiagramPatch JSON containing node updates, additions, or theme adjustments" }
+                }
+            }),
+        },
+        McpToolInfo {
+            name: "oneoffice.pdf.find_anchors".to_string(),
+            description: "Scans a PDF document to locate standard signing and seal anchor phrases (like '(인)', '(서명)') and returns bounding boxes and center points.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "required": ["pdf_base64"],
+                "properties": {
+                    "pdf_base64": { "type": "string", "description": "Base64 encoded PDF document bytes" },
+                    "query": { "type": "string", "description": "Anchor query text to locate (default: '(인)')" },
+                    "page_index": { "type": "integer", "description": "Optional 0-based page index to restrict search" }
+                }
+            }),
+        },
+        McpToolInfo {
+            name: "oneoffice.calc.eval".to_string(),
+            description: "Evaluates an Excel formula expression (e.g. '=SUM(10, 20, 30)', '=XLOOKUP(...)', '=NPV(...)') using GridCraft's 513-function engine.".to_string(),
+            input_schema: json!({
+                "type": "object",
+                "required": ["formula"],
+                "properties": {
+                    "formula": { "type": "string", "description": "Excel formula string to evaluate (e.g. '=SUM(100, 250, 400)')" }
+                }
+            }),
+        },
     ]
 }
 
@@ -161,10 +235,16 @@ pub fn call_tool(name: &str, arguments: &Value) -> Result<McpToolResult, McpErro
     match name {
         "oneoffice.doc.create" => handle_doc_create(arguments),
         "oneoffice.doc.inspect" => handle_doc_inspect(arguments),
+        "oneoffice.doc.convert" => handle_doc_convert(arguments),
+        "oneoffice.doc.fill_fields" => handle_doc_fill_fields(arguments),
+        "oneoffice.diagram.list_templates" => handle_diagram_list_templates(arguments),
         "oneoffice.diagram.compose" => handle_diagram_compose(arguments),
+        "oneoffice.diagram.patch" => handle_diagram_patch(arguments),
         "oneoffice.table.upsert" => handle_table_upsert(arguments),
         "oneoffice.chart.upsert" => handle_chart_upsert(arguments),
+        "oneoffice.pdf.find_anchors" => handle_pdf_find_anchors(arguments),
         "oneoffice.pdf.sign" => handle_pdf_sign(arguments),
+        "oneoffice.calc.eval" => handle_calc_eval(arguments),
         "oneoffice.visual.verify_page" => handle_visual_verify(arguments),
         _ => Err(McpError::ToolNotFound(name.to_string())),
     }
@@ -869,4 +949,484 @@ fn handle_doc_inspect(args: &Value) -> Result<McpToolResult, McpError> {
         tool: "oneoffice.doc.inspect".to_string(),
         details: "Unrecognized document format (neither PDF nor valid DOCX/HWPX ZIP package)".to_string(),
     })
+}
+
+fn handle_diagram_list_templates(args: &Value) -> Result<McpToolResult, McpError> {
+    let category_filter = args.get("category").and_then(Value::as_str);
+    let templates = list_diagram_templates();
+    let mut list = Vec::new();
+    for t in templates {
+        if let Some(cat) = category_filter
+            && !t.category.eq_ignore_ascii_case(cat)
+        {
+            continue;
+        }
+        list.push(json!({
+            "id": t.id,
+            "name": t.name,
+            "category": t.category,
+            "description": t.description,
+            "recommended_width_pt": t.recommended_width_pt,
+        }));
+    }
+    let result = json!({
+        "success": true,
+        "total_count": list.len(),
+        "templates": list,
+    });
+    Ok(McpToolResult::success_json(&result))
+}
+
+fn handle_diagram_patch(args: &Value) -> Result<McpToolResult, McpError> {
+    let spec_val = args.get("spec").ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.diagram.patch".to_string(),
+        details: "Missing required argument 'spec'".to_string(),
+    })?;
+    let mut spec: DiagramSpec = serde_json::from_value(spec_val.clone())
+        .map_err(|e| McpError::InvalidArguments {
+            tool: "oneoffice.diagram.patch".to_string(),
+            details: format!("Failed to parse 'spec': {e}"),
+        })?;
+
+    let patch_val = args.get("patch").ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.diagram.patch".to_string(),
+        details: "Missing required argument 'patch'".to_string(),
+    })?;
+    let patch: DiagramPatch = serde_json::from_value(patch_val.clone())
+        .map_err(|e| McpError::InvalidArguments {
+            tool: "oneoffice.diagram.patch".to_string(),
+            details: format!("Failed to parse 'patch': {e}"),
+        })?;
+
+    patch_diagram(&mut spec, &patch)
+        .map_err(|e| McpError::Engine(format!("Failed to patch diagram: {e}")))?;
+
+    let scene = solve_layout(&spec)
+        .map_err(|e| McpError::Engine(format!("Failed to solve layout: {e}")))?;
+
+    let svg = compile_svg(&scene);
+    let png_bytes = compile_png(&scene, 2.0)
+        .map_err(|e| McpError::Engine(format!("Failed to compile PNG: {e}")))?;
+    let png_b64 = BASE64.encode(&png_bytes);
+    let owpml = compile_owpml(&scene);
+    let drawingml = compile_drawingml(&scene);
+
+    let diag = &scene.diagnostics;
+    let result = json!({
+        "success": true,
+        "updated_spec": spec,
+        "svg": svg,
+        "png_base64": png_b64,
+        "owpml": owpml,
+        "drawingml": drawingml,
+        "diagnostics": {
+            "overflow_count": diag.overflow_count,
+            "collision_count": diag.collision_count,
+            "bounding_size_pt": [scene.width_pt, scene.height_pt]
+        }
+    });
+    Ok(McpToolResult::success_json(&result))
+}
+
+fn handle_pdf_find_anchors(args: &Value) -> Result<McpToolResult, McpError> {
+    let pdf_b64 = args.get("pdf_base64").and_then(Value::as_str).ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.pdf.find_anchors".to_string(),
+        details: "Missing required argument 'pdf_base64'".to_string(),
+    })?;
+    let pdf_bytes = BASE64.decode(pdf_b64).map_err(|e| McpError::Base64(e.to_string()))?;
+
+    let session = PdfDocumentSession::load(&pdf_bytes)
+        .map_err(|e| McpError::Engine(format!("Failed to load PDF: {e}")))?;
+
+    let query = args.get("query").and_then(Value::as_str).unwrap_or("(인)");
+    let page_index_opt = args.get("page_index").and_then(Value::as_u64).map(|v| v as usize);
+
+    let mut matches = Vec::new();
+    let total_pages = session.page_count();
+
+    let mut search_page = |page: usize| {
+        if query == "(인)" || query == "(서명)" || query == "서명" || query == "인" {
+            if let Ok(anchors) = session.find_signature_anchors(page) {
+                for a in anchors {
+                    let [cx, cy] = a.center();
+                    matches.push(json!({
+                        "page_index": a.page_index,
+                        "text": a.text,
+                        "rect_pt": a.rect_pt,
+                        "center_pt": [cx, cy],
+                    }));
+                }
+            }
+        } else if let Ok(anchors) = session.find_text(page, query) {
+            for a in anchors {
+                let [cx, cy] = a.center();
+                matches.push(json!({
+                    "page_index": a.page_index,
+                    "text": a.text,
+                    "rect_pt": a.rect_pt,
+                    "center_pt": [cx, cy],
+                }));
+            }
+        }
+    };
+
+    if let Some(target_page) = page_index_opt {
+        if target_page < total_pages {
+            search_page(target_page);
+        }
+    } else {
+        for p in 0..total_pages {
+            search_page(p);
+        }
+    }
+
+    let result = json!({
+        "success": true,
+        "query": query,
+        "page_count": total_pages,
+        "total_matches": matches.len(),
+        "anchors": matches,
+    });
+    Ok(McpToolResult::success_json(&result))
+}
+
+fn handle_doc_fill_fields(args: &Value) -> Result<McpToolResult, McpError> {
+    let data_b64 = args.get("data_base64").and_then(Value::as_str).ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.doc.fill_fields".to_string(),
+        details: "Missing required argument 'data_base64'".to_string(),
+    })?;
+    let bytes = BASE64.decode(data_b64).map_err(|e| McpError::Base64(e.to_string()))?;
+
+    let format = args.get("format").and_then(Value::as_str).unwrap_or("hwpx");
+    let fields_map = args.get("fields").and_then(Value::as_object).ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.doc.fill_fields".to_string(),
+        details: "Missing required argument 'fields' (must be a key-value object)".to_string(),
+    })?;
+
+    let mut replacements = std::collections::BTreeMap::new();
+    for (k, v) in fields_map {
+        let val_str = match v {
+            Value::String(s) => s.clone(),
+            other => other.to_string(),
+        };
+        replacements.insert(k.clone(), val_str);
+    }
+
+    match format {
+        "hwpx" => {
+            let mut hwpx = HwpxPackage::from_bytes(&bytes)
+                .map_err(|e| McpError::Engine(format!("Failed to parse HWPX package: {e}")))?;
+            let sec_count = hwpx.section_count();
+            let mut modified_count = 0;
+            for i in 0..sec_count {
+                if let Ok(xml) = hwpx.section_xml(i) {
+                    let replaced = replace_fields_in_section(&xml, &replacements);
+                    if replaced != xml {
+                        modified_count += 1;
+                        hwpx.set_section_xml(i, &replaced)
+                            .map_err(|e| McpError::Engine(format!("Failed to update section XML: {e}")))?;
+                    }
+                }
+            }
+            let out_bytes = hwpx.to_bytes()
+                .map_err(|e| McpError::Engine(format!("Failed to serialize HWPX: {e}")))?;
+            let result = json!({
+                "success": true,
+                "format": "hwpx",
+                "sections_modified": modified_count,
+                "fields_applied_count": replacements.len(),
+                "document_base64": BASE64.encode(&out_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        "docx" => {
+            let reader = std::io::Cursor::new(&bytes);
+            let mut zip = zip::ZipArchive::new(reader)
+                .map_err(|e| McpError::Engine(format!("Failed to read DOCX zip: {e}")))?;
+
+            let mut out_buffer = std::io::Cursor::new(Vec::new());
+            let mut zip_writer = zip::ZipWriter::new(&mut out_buffer);
+            let mut replaced_any = false;
+
+            for i in 0..zip.len() {
+                let mut file = zip.by_index(i)
+                    .map_err(|e| McpError::Engine(format!("Failed to read zip entry: {e}")))?;
+                let name = file.name().to_string();
+
+                let mut data = Vec::new();
+                std::io::Read::read_to_end(&mut file, &mut data)
+                    .map_err(|e| McpError::Io(e.to_string()))?;
+
+                if name == "word/document.xml"
+                    && let Ok(mut text) = String::from_utf8(data.clone())
+                {
+                    for (k, v) in &replacements {
+                        let curly_pat = format!("{{{{{}}}}}", k);
+                        let guillemet_pat = format!("«{}»", k);
+                        if text.contains(&curly_pat) || text.contains(&guillemet_pat) {
+                            text = text.replace(&curly_pat, v);
+                            text = text.replace(&guillemet_pat, v);
+                            replaced_any = true;
+                        }
+                    }
+                    data = text.into_bytes();
+                }
+
+                let options = SimpleFileOptions::default()
+                    .compression_method(zip::CompressionMethod::Deflated);
+                zip_writer.start_file(&name, options)
+                    .map_err(|e| McpError::Engine(format!("Failed to write zip entry: {e}")))?;
+                std::io::Write::write_all(&mut zip_writer, &data)
+                    .map_err(|e| McpError::Io(e.to_string()))?;
+            }
+
+            zip_writer.finish()
+                .map_err(|e| McpError::Engine(format!("Failed to finalize DOCX zip: {e}")))?;
+
+            let out_bytes = out_buffer.into_inner();
+            let result = json!({
+                "success": true,
+                "format": "docx",
+                "replaced": replaced_any,
+                "fields_applied_count": replacements.len(),
+                "document_base64": BASE64.encode(&out_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        other => Err(McpError::InvalidArguments {
+            tool: "oneoffice.doc.fill_fields".to_string(),
+            details: format!("Unsupported document format: '{other}'. Expected 'hwpx' or 'docx'"),
+        }),
+    }
+}
+
+fn handle_doc_convert(args: &Value) -> Result<McpToolResult, McpError> {
+    let from_fmt = args.get("from_format").and_then(Value::as_str).ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.doc.convert".to_string(),
+        details: "Missing required argument 'from_format'".to_string(),
+    })?;
+    let to_fmt = args.get("to_format").and_then(Value::as_str).ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.doc.convert".to_string(),
+        details: "Missing required argument 'to_format'".to_string(),
+    })?;
+    let data_b64 = args.get("data_base64").and_then(Value::as_str).ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.doc.convert".to_string(),
+        details: "Missing required argument 'data_base64'".to_string(),
+    })?;
+    let bytes = BASE64.decode(data_b64).map_err(|e| McpError::Base64(e.to_string()))?;
+
+    match (from_fmt, to_fmt) {
+        ("hwpx", "pdf") => {
+            let hwpx = HwpxPackage::from_bytes(&bytes)
+                .map_err(|e| McpError::Engine(format!("Failed to parse HWPX: {e}")))?;
+            let mut paragraphs = Vec::new();
+            let mut title = "ONEOFFICE HWPX 변환 문서".to_string();
+
+            for i in 0..hwpx.section_count() {
+                if let Ok(xml) = hwpx.section_xml(i) {
+                    let mut cursor = 0;
+                    while let Some(start) = xml[cursor..].find("<hp:t>") {
+                        let actual_start = cursor + start + 6;
+                        if let Some(end) = xml[actual_start..].find("</hp:t>") {
+                            let text = &xml[actual_start..actual_start + end];
+                            if !text.trim().is_empty() {
+                                if paragraphs.is_empty() {
+                                    title = text.trim().to_string();
+                                }
+                                paragraphs.push(text.trim().to_string());
+                            }
+                            cursor = actual_start + end + 7;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            if paragraphs.is_empty() {
+                paragraphs.push("내용이 없는 문서입니다.".to_string());
+            }
+            let pdf_bytes = generate_document_pdf(&title, "HWPX → PDF 변환 산출물", &paragraphs)
+                .map_err(|e| McpError::Engine(format!("Failed to generate PDF: {e}")))?;
+
+            let result = json!({
+                "success": true,
+                "from_format": "hwpx",
+                "to_format": "pdf",
+                "mime_type": "application/pdf",
+                "paragraphs_converted": paragraphs.len(),
+                "output_base64": BASE64.encode(&pdf_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        ("docx", "pdf") => {
+            let doc = wordcraft_docx::read(&bytes)
+                .map_err(|e| McpError::Engine(format!("Failed to parse DOCX: {e}")))?;
+            let mut paragraphs = Vec::new();
+            let mut title = "ONEOFFICE DOCX 변환 문서".to_string();
+
+            for block in &doc.body {
+                if let wordcraft_doc::Block::Para(p) = block.as_ref()
+                    && !p.text.trim().is_empty()
+                {
+                    if paragraphs.is_empty() {
+                        title = p.text.trim().to_string();
+                    }
+                    paragraphs.push(p.text.trim().to_string());
+                }
+            }
+            if paragraphs.is_empty() {
+                paragraphs.push("내용이 없는 문서입니다.".to_string());
+            }
+            let pdf_bytes = generate_document_pdf(&title, "DOCX → PDF 변환 산출물", &paragraphs)
+                .map_err(|e| McpError::Engine(format!("Failed to generate PDF: {e}")))?;
+
+            let result = json!({
+                "success": true,
+                "from_format": "docx",
+                "to_format": "pdf",
+                "mime_type": "application/pdf",
+                "paragraphs_converted": paragraphs.len(),
+                "output_base64": BASE64.encode(&pdf_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        ("hwpx", "md") => {
+            let hwpx = HwpxPackage::from_bytes(&bytes)
+                .map_err(|e| McpError::Engine(format!("Failed to parse HWPX: {e}")))?;
+            let mut md = String::new();
+            for i in 0..hwpx.section_count() {
+                if let Ok(xml) = hwpx.section_xml(i) {
+                    let mut cursor = 0;
+                    while let Some(start) = xml[cursor..].find("<hp:t>") {
+                        let actual_start = cursor + start + 6;
+                        if let Some(end) = xml[actual_start..].find("</hp:t>") {
+                            let text = &xml[actual_start..actual_start + end];
+                            if !text.trim().is_empty() {
+                                if md.is_empty() {
+                                    md.push_str(&format!("# {}\n\n", text.trim()));
+                                } else {
+                                    md.push_str(&format!("{}\n\n", text.trim()));
+                                }
+                            }
+                            cursor = actual_start + end + 7;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            let result = json!({
+                "success": true,
+                "from_format": "hwpx",
+                "to_format": "md",
+                "markdown": md,
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        ("docx", "md") => {
+            let doc = wordcraft_docx::read(&bytes)
+                .map_err(|e| McpError::Engine(format!("Failed to parse DOCX: {e}")))?;
+            let mut md = String::new();
+            for block in &doc.body {
+                if let wordcraft_doc::Block::Para(p) = block.as_ref()
+                    && !p.text.trim().is_empty()
+                {
+                    if md.is_empty() {
+                        md.push_str(&format!("# {}\n\n", p.text.trim()));
+                    } else {
+                        md.push_str(&format!("{}\n\n", p.text.trim()));
+                    }
+                }
+            }
+            let result = json!({
+                "success": true,
+                "from_format": "docx",
+                "to_format": "md",
+                "markdown": md,
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        ("md", "hwpx") => {
+            let md_str = String::from_utf8(bytes)
+                .map_err(|e| McpError::Engine(format!("Invalid UTF-8 in Markdown: {e}")))?;
+            let lines: Vec<&str> = md_str.lines().filter(|l| !l.trim().is_empty()).collect();
+            let title = lines.first().copied().unwrap_or("Markdown 변환 문서").trim_start_matches('#').trim();
+            let paragraphs: Vec<String> = lines.iter().skip(1).map(|l| l.to_string()).collect();
+
+            let hwpx = HwpxPackage::create_minimal_hwpx(title, &paragraphs.join("\n\n"))
+                .map_err(|e| McpError::Engine(format!("Failed to create HWPX from Markdown: {e}")))?;
+            let hwpx_bytes = hwpx.to_bytes()
+                .map_err(|e| McpError::Engine(format!("Failed to serialize HWPX: {e}")))?;
+
+            let result = json!({
+                "success": true,
+                "from_format": "md",
+                "to_format": "hwpx",
+                "mime_type": "application/x-hwp+zip",
+                "output_base64": BASE64.encode(&hwpx_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        ("md", "pdf") => {
+            let md_str = String::from_utf8(bytes)
+                .map_err(|e| McpError::Engine(format!("Invalid UTF-8 in Markdown: {e}")))?;
+            let lines: Vec<&str> = md_str.lines().filter(|l| !l.trim().is_empty()).collect();
+            let title = lines.first().copied().unwrap_or("Markdown 변환 문서").trim_start_matches('#').trim();
+            let paragraphs: Vec<String> = lines.iter().skip(1).map(|l| l.to_string()).collect();
+
+            let pdf_bytes = generate_document_pdf(title, "Markdown → PDF 변환 산출물", &paragraphs)
+                .map_err(|e| McpError::Engine(format!("Failed to generate PDF: {e}")))?;
+
+            let result = json!({
+                "success": true,
+                "from_format": "md",
+                "to_format": "pdf",
+                "mime_type": "application/pdf",
+                "output_base64": BASE64.encode(&pdf_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        (from, to) => Err(McpError::InvalidArguments {
+            tool: "oneoffice.doc.convert".to_string(),
+            details: format!("Unsupported conversion pair: '{from}' to '{to}'"),
+        }),
+    }
+}
+
+fn handle_calc_eval(args: &Value) -> Result<McpToolResult, McpError> {
+    let formula = args.get("formula").and_then(Value::as_str).ok_or_else(|| McpError::InvalidArguments {
+        tool: "oneoffice.calc.eval".to_string(),
+        details: "Missing required argument 'formula'".to_string(),
+    })?;
+
+    let formula_with_eq = if formula.starts_with('=') {
+        formula.to_string()
+    } else {
+        format!("={formula}")
+    };
+
+    let spec = CalcTableSpec {
+        sheet_name: "CalcEval".to_string(),
+        cells: vec![vec![CellInput::formula(formula_with_eq.clone())]],
+        merges: Vec::new(),
+    };
+
+    let output = CalcTableEngine::evaluate_spec(&spec)
+        .map_err(|e| McpError::Engine(format!("Formula evaluation failed: {e}")))?;
+
+    let evaluated = output.display_cells
+        .first()
+        .and_then(|row| row.first())
+        .cloned()
+        .unwrap_or_default();
+
+    let supported_count = CalcTableEngine::supported_function_count();
+
+    let result = json!({
+        "success": true,
+        "formula": formula,
+        "evaluated_result": evaluated,
+        "engine_supported_functions_count": supported_count,
+    });
+    Ok(McpToolResult::success_json(&result))
 }
