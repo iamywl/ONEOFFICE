@@ -78,6 +78,15 @@ if (mode === "all" || mode === "rust") {
   runStep("Tier 6B: IEEE 1012 V&V (Verification & Validation) Lifecycle Suite", "node", [
     "scripts/qa/v_and_v_runner.mjs",
   ]);
+  runStep("Tier 7A: Supervisor Agent Audit (Work-Integrity & Scope Governance)", "node", [
+    "scripts/qa/audit-agents.mjs",
+  ]);
+  runStep("Tier 7B: Red Team Adversarial Fuzzing (Extreme Edge Stress & Never-Crash)", "node", [
+    "scripts/qa/fuzz-documents.mjs",
+  ]);
+  runStep("Tier 7C: LLM-as-a-Judge 5-Axis Quality Scorecard (Commercial Grade A+)", "node", [
+    "scripts/qa/llm-judge.mjs",
+  ]);
 }
 
 if (mode === "all" || mode === "hwpx") {

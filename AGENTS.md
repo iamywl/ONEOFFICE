@@ -32,13 +32,14 @@
 
 ---
 
-## 3. 정예 10대 서브에이전트 조직 및 병렬 파이프라인
+## 3. 정예 14대 서브에이전트 조직 및 관리감독·레드팀·LLM판정 파이프라인
 
-병렬 개발 속도를 극대화하고 파일 충돌 및 자가 승인(Self-Certification)을 원천 차단하기 위해 **쓰기 경로(Write Scope)가 완전히 격리된 10대 전문 서브에이전트 체제**로 운영합니다.
+병렬 개발 속도를 극대화하고 파일 충돌, 자가 승인(Self-Certification), 껍데기 구현을 원천 차단하기 위해 **쓰기 경로(Write Scope)가 완전히 격리된 14대 전문 서브에이전트 체제**로 운영합니다.
 
 ```mermaid
 flowchart TD
-    Orch(["총괄 오케스트레이터 (Main Agent)"]) --> P["01. 기획 & 아키텍처 거버너\n01-chief-planner.md"]
+    Orch(["총괄 오케스트레이터 (Main Agent)"]) --> SUP["12. 에이전트 직무 관리감독관\n12-agent-supervisor-governor.md\n(전 에이전트 헌장/쓰기영역 감찰 및 가짜목업 엄단)"]
+    SUP --> P["01. 기획 & 아키텍처 거버너\n01-chief-planner.md"]
     
     P --> R["02. Rust 수식·차트·폰트 브릿지\n02-rust-core-bridge.md"]
     P --> D["03. 제안서 도식화 & 레이아웃 엔진\n03-diagram-layout-architect.md"]
@@ -58,12 +59,15 @@ flowchart TD
     U --> PKG["08. VSC 익스텐션 & 3대 OS 패키징\n08-crossplatform-packaging-governor.md"]
     M --> PKG
 
-    PKG --> Q["09. 적대적 실측 QA & 비주얼 감사관\n09-adversarial-qa-auditor.md"]
+    PKG --> RED["13. 적대적 레드팀 & 카오스 퍼징 침투 감사관\n13-redteam-adversarial-security.md\n(악성/손상/경계조건 주입 및 Never-Crash 검증)"]
+    RED --> Q["09. 적대적 실측 QA & 비주얼 감사관\n09-adversarial-qa-auditor.md"]
     PKG --> UIX["11. UI/UX 디자인 & 실측 경험 감사관\n11-uiux-design-auditor.md"]
     UIX -->|"UI/UX 결함 보고 & 디자인 지시"| U
-    Q -->|"6단계 실측 게이트 100% 통과"| DOC["10. 문서 디자인 & 비주얼 쇼케이스\n10-doc-design-showcase-architect.md"]
+    Q --> JUDGE["14. LLM as a Judge 다면 품질 판정관\n14-llm-judge-evaluator.md\n(5축 루브릭 정량 채점 및 상용 출시 적격 판정)"]
+    JUDGE -->|"GRADE A+ (≥4.8/5.0) 통과"| DOC["10. 문서 디자인 & 비주얼 쇼케이스\n10-doc-design-showcase-architect.md"]
     DOC -->|"하네스 통과 & 최종 쇼케이스 완성"| Orch
     Q -->|"결함 발견 시 재현 좌표와 함께 반려"| Orch
+    JUDGE -->|"루브릭 미달 시 반려 리포트 발행"| Orch
 ```
 
 | 코드 | 서브에이전트 ID | 정의 문서 | 독점 쓰기 영역 (Write Scope) | 핵심 임무 |
@@ -79,6 +83,9 @@ flowchart TD
 | **09** | `oneoffice-qa-auditor` | `.agents/agents/09-adversarial-qa-auditor.md` | `tests/**`, `scripts/qa/**`, `docs/QA_VERIFICATION_MATRIX.md` | 무신뢰(Zero-Trust) 6단계 실측 검증(스키마, 수식 오라클, 도식 BBox, PDF 서명 무결성, VSIX/네이티브 캡처) |
 | **10** | `oneoffice-doc-designer` | `.agents/agents/10-doc-design-showcase-architect.md` | `README.md`, `README.en.md`, `docs/SHOWCASE_GALLERY.md`, `docs/assets/**`, `scripts/qa/doc_harness.mjs` | `im-not-ai` 벤치마크 기반 쇼케이스 문서화, 캡처 기반 기능/장점 실측 명세, 문서 검증 하네스 운용 |
 | **11** | `oneoffice-uiux-auditor` | `.agents/agents/11-uiux-design-auditor.md` | `docs/design/**`, `docs/UIUX_*.md`, `docs/assets/uiux_audit/**` | UI/UX 디자인 시스템 수립, 실측 화면 캡처 전수 감사, 비주얼/에르고노믹스 결함 식별 및 개발 에이전트 지시 |
+| **12** | `oneoffice-supervisor` | `.agents/agents/12-agent-supervisor-governor.md` | `docs/supervision/**`, `docs/AUDIT_LOGS.md`, `scripts/qa/audit-agents.mjs` | 전 에이전트 직무 감찰, 14대 원칙 및 쓰기 영역 준수 검사, 가짜 목업/껍데기 구현 적발 및 승인증 발급 |
+| **13** | `oneoffice-red-team` | `.agents/agents/13-redteam-adversarial-security.md` | `tests/adversarial/**`, `scripts/qa/fuzz-documents.mjs`, `docs/RED_TEAM_REPORT.md` | 적대적 카오스 침투, 악성/손상 파일 퍼징, 순환수식/메모리 오버런 공격 시험 및 Never-Crash 불변식 감사 |
+| **14** | `oneoffice-llm-judge` | `.agents/agents/14-llm-judge-evaluator.md` | `docs/evals/**`, `scripts/qa/llm-judge.mjs`, `docs/LLM_JUDGE_SCORECARD.md` | 5대 축(기능완전성·시각미학·무손실규격·에르고노믹스·견고성) 루브릭 정량 채점 및 상용 출시 적격 판정 |
 
 ---
 

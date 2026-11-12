@@ -175,9 +175,9 @@ flowchart TD
 
 ---
 
-## 👥 10 Specialized Sub-Agents
+## 👥 14 Specialized Sub-Agents
 
-ONEOFFICE is governed by 10 specialized sub-agents with strict write-scope isolation ([`AGENTS.md`](AGENTS.md)):
+ONEOFFICE is governed by 14 specialized sub-agents with strict write-scope isolation ([`AGENTS.md`](AGENTS.md)):
 
 | ID | Agent | Charter | Scope | Core Mission |
 | :---: | :--- | :--- | :--- | :--- |
@@ -191,6 +191,10 @@ ONEOFFICE is governed by 10 specialized sub-agents with strict write-scope isola
 | **08** | `oneoffice-release-governor` | `.agents/agents/08-crossplatform-packaging-governor.md` | `extensions/**`, `apps/**` | All-in-one VS Code VSIX & macOS/Win/Linux installers |
 | **09** | `oneoffice-qa-auditor` | `.agents/agents/09-adversarial-qa-auditor.md` | `tests/**`, `scripts/qa/**` | Zero-Trust 6-tier empirical verification gate |
 | **10** | `oneoffice-doc-designer` | `.agents/agents/10-doc-design-showcase-architect.md` | `README.md`, `docs/assets/**` | Documentation showcase design & harness management |
+| **11** | `oneoffice-uiux-auditor` | `.agents/agents/11-uiux-design-auditor.md` | `docs/design/**`, `docs/UIUX_*.md` | UI/UX design system & visual/ergonomic defect triage |
+| **12** | `oneoffice-supervisor` | `.agents/agents/12-agent-supervisor-governor.md` | `docs/supervision/**`, `docs/AUDIT_LOGS.md` | Agent charter audit, write scope enforcement, zero mock detection |
+| **13** | `oneoffice-red-team` | `.agents/agents/13-redteam-adversarial-security.md` | `tests/adversarial/**`, `docs/RED_TEAM_REPORT.md` | Chaos penetration, malformed file fuzzing & Never-Crash audit |
+| **14** | `oneoffice-llm-judge` | `.agents/agents/14-llm-judge-evaluator.md` | `docs/evals/**`, `docs/LLM_JUDGE_SCORECARD.md` | 5-axis rubric quantitative scoring (Grade A+ certification) |
 
 ---
 

@@ -195,9 +195,9 @@ flowchart TD
 
 ---
 
-## 👥 정예 10대 서브에이전트 조직 (10 Specialized Sub-Agents)
+## 👥 정예 14대 서브에이전트 조직 (14 Specialized Sub-Agents)
 
-ONEOFFICE는 병렬 개발의 품질을 극대화하고 자가 승인(Self-Certification)을 원천 차단하기 위해 **독점 쓰기 영역(Write Scope)이 철저히 격리된 10대 전문 에이전트 조직**으로 운영됩니다 ([`AGENTS.md`](AGENTS.md) 헌장 준수).
+ONEOFFICE는 병렬 개발의 품질을 극대화하고 자가 승인(Self-Certification)을 원천 차단하기 위해 **독점 쓰기 영역(Write Scope)이 철저히 격리된 14대 전문 에이전트 조직**으로 운영됩니다 ([`AGENTS.md`](AGENTS.md) 헌장 준수).
 
 | ID | 서브에이전트 | 정의 문서 | 독점 쓰기 영역 | 핵심 임무 |
 | :---: | :--- | :--- | :--- | :--- |
@@ -211,6 +211,10 @@ ONEOFFICE는 병렬 개발의 품질을 극대화하고 자가 승인(Self-Certi
 | **08** | `oneoffice-release-governor` | `.agents/agents/08-crossplatform-packaging-governor.md` | `extensions/**`, `apps/**`, `packaging/**` | 올인원 VS Code VSIX 패키징 및 macOS · Windows · Linux 설치기 구축 |
 | **09** | `oneoffice-qa-auditor` | `.agents/agents/09-adversarial-qa-auditor.md` | `tests/**`, `scripts/qa/**` | 무신뢰(Zero-Trust) 6단계 실측 검증 (수식 오라클, 도식 BBox, PDF 서명 무결성) |
 | **10** | `oneoffice-doc-designer` | `.agents/agents/10-doc-design-showcase-architect.md` | `README.md`, `docs/assets/**`, `scripts/qa/doc_harness.mjs` | `im-not-ai` 벤치마크 쇼케이스 설계, 캡처 기반 기능 명세, 문서 하네스 운용 |
+| **11** | `oneoffice-uiux-auditor` | `.agents/agents/11-uiux-design-auditor.md` | `docs/design/**`, `docs/UIUX_*.md` | UI/UX 디자인 시스템 수립, 실측 화면 캡처 전수 감사 및 인터페이스 결함 식별 |
+| **12** | `oneoffice-supervisor` | `.agents/agents/12-agent-supervisor-governor.md` | `docs/supervision/**`, `docs/AUDIT_LOGS.md` | 전 에이전트 직무 감찰, 쓰기 영역 감찰, 가짜 목업/껍데기 구현 적발 및 승인증 발급 |
+| **13** | `oneoffice-red-team` | `.agents/agents/13-redteam-adversarial-security.md` | `tests/adversarial/**`, `docs/RED_TEAM_REPORT.md` | 적대적 카오스 침투, 악성 파일 퍼징, 순환수식 공격 및 Never-Crash 불변식 감사 |
+| **14** | `oneoffice-llm-judge` | `.agents/agents/14-llm-judge-evaluator.md` | `docs/evals/**`, `docs/LLM_JUDGE_SCORECARD.md` | 5대 축(기능·미학·무손실·에르고노믹스·견고성) 루브릭 정량 채점 (GRADE A+ 판정) |
 
 ---
 
@@ -391,7 +395,7 @@ ONEOFFICE/
 │   ├── run-all-gates.mjs                    # 전체 6-Tier 게이트 일괄 검증 러너
 │   ├── v_and_v_runner.mjs                   # IEEE 1012 V&V 실행기
 │   └── verify-readme.mjs                    # 문서 링크 및 에셋 무결성 감사 하네스
-├── AGENTS.md                                # 10대 전문 서브에이전트 협업 헌장
+├── AGENTS.md                                # 14대 전문 서브에이전트 협업 헌장
 └── ATTRIBUTION.md                           # 클린룸 오픈소스 크레딧 및 라이선스 고지
 ```
 
