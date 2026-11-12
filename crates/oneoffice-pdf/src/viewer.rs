@@ -99,7 +99,11 @@ impl PdfDocumentSession {
             });
         }
 
-        let ppp = scale.clamp(0.25, 6.0);
+        let ppp = if scale.is_finite() && scale > 0.0 {
+            scale.clamp(0.25, 6.0)
+        } else {
+            2.0
+        };
         let pdf = craft_pdf::open_slice(&self.raw_bytes, None)?;
         let page = pdf.pages().get(page_index).ok_or(PdfError::PageOutOfBounds {
             page_index,

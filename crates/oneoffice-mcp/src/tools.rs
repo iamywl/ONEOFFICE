@@ -250,6 +250,14 @@ pub fn call_tool(name: &str, arguments: &Value) -> Result<McpToolResult, McpErro
     }
 }
 
+fn escape_xml(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+        .replace('\'', "&apos;")
+}
+
 // ---------------------------------------------------------------------------
 // Handlers
 // ---------------------------------------------------------------------------
@@ -393,19 +401,25 @@ fn handle_pdf_sign(args: &Value) -> Result<McpToolResult, McpError> {
     let width_pt = args
         .get("width_pt")
         .and_then(Value::as_f64)
-        .unwrap_or(48.0) as f32;
+        .map(|w| w as f32)
+        .filter(|w| w.is_finite() && *w > 0.0)
+        .unwrap_or(48.0)
+        .clamp(8.0, 500.0);
     let height_pt = args
         .get("height_pt")
         .and_then(Value::as_f64)
-        .unwrap_or(48.0) as f32;
+        .map(|h| h as f32)
+        .filter(|h| h.is_finite() && *h > 0.0)
+        .unwrap_or(48.0)
+        .clamp(8.0, 500.0);
 
     let session = PdfDocumentSession::load(&pdf_bytes)
         .map_err(|e| McpError::Engine(format!("Failed to open PDF: {e}")))?;
 
     // Determine placement coordinates
     let (mut rx, mut ry) = if let (Some(x), Some(y)) = (
-        args.get("x_pt").and_then(Value::as_f64),
-        args.get("y_pt").and_then(Value::as_f64),
+        args.get("x_pt").and_then(Value::as_f64).filter(|v| v.is_finite()),
+        args.get("y_pt").and_then(Value::as_f64).filter(|v| v.is_finite()),
     ) {
         (x as f32, y as f32)
     } else {
@@ -476,7 +490,10 @@ fn handle_visual_verify(args: &Value) -> Result<McpToolResult, McpError> {
     let scale = args
         .get("scale")
         .and_then(Value::as_f64)
-        .unwrap_or(2.0) as f32;
+        .map(|s| s as f32)
+        .filter(|s| s.is_finite() && *s > 0.0)
+        .unwrap_or(2.0)
+        .clamp(0.25, 6.0);
 
     match format {
         "pdf" => {
@@ -628,7 +645,7 @@ fn handle_doc_create(args: &Value) -> Result<McpToolResult, McpError> {
                 && !tbl.is_empty()
             {
                 let rows = tbl.len();
-                let cols = tbl.first().map_or(1, Vec::len);
+                let cols = tbl.first().map_or(1, Vec::len).max(1);
                 let mut table = wordcraft_doc::Table::new(rows, cols, 468.0);
                 for (r_idx, row_data) in tbl.iter().enumerate() {
                     if let Some(row) = table.rows.get_mut(r_idx) {
@@ -718,7 +735,7 @@ fn handle_doc_create(args: &Value) -> Result<McpToolResult, McpError> {
                 let p_xml = format!(
                     r#"<hp:p id="{}"><hp:run><hp:t>{}</hp:t></hp:run></hp:p>"#,
                     idx + 1,
-                    p_text
+                    escape_xml(p_text)
                 );
                 if let Some((before_end, end_tag)) = sec_xml.rsplit_once("</hs:sec>") {
                     sec_xml = format!("{before_end}{p_xml}{end_tag}");
@@ -776,6 +793,10 @@ fn handle_doc_create(args: &Value) -> Result<McpToolResult, McpError> {
             // Image attachment
             if let Some(img_data) = image_bytes {
                 hwpx.add_binary_attachment("BinData/image_1.png", img_data);
+                let pic_xml = r#"<hp:p id="900"><hp:run><hp:pic id="pic-1" textWrap="TOP_AND_BOTTOM"><hp:offset x="0" y="0"/><hp:orgSz width="24000" height="18000"/><hp:curSz width="24000" height="18000"/><hc:img binaryItemIDRef="image_1.png"/></hp:pic></hp:run></hp:p>"#;
+                if let Some((before_end, end_tag)) = sec_xml.rsplit_once("</hs:sec>") {
+                    sec_xml = format!("{before_end}{pic_xml}{end_tag}");
+                }
             }
 
             hwpx.set_section_xml(0, &sec_xml)
@@ -1163,9 +1184,10 @@ fn handle_doc_fill_fields(args: &Value) -> Result<McpToolResult, McpError> {
                     for (k, v) in &replacements {
                         let curly_pat = format!("{{{{{}}}}}", k);
                         let guillemet_pat = format!("«{}»", k);
+                        let escaped_v = escape_xml(v);
                         if text.contains(&curly_pat) || text.contains(&guillemet_pat) {
-                            text = text.replace(&curly_pat, v);
-                            text = text.replace(&guillemet_pat, v);
+                            text = text.replace(&curly_pat, &escaped_v);
+                            text = text.replace(&guillemet_pat, &escaped_v);
                             replaced_any = true;
                         }
                     }
@@ -1258,6 +1280,71 @@ fn handle_doc_convert(args: &Value) -> Result<McpToolResult, McpError> {
             });
             Ok(McpToolResult::success_json(&result))
         }
+        ("hwpx", "docx") => {
+            let hwpx = HwpxPackage::from_bytes(&bytes)
+                .map_err(|e| McpError::Engine(format!("Failed to parse HWPX: {e}")))?;
+            let mut paragraphs = Vec::new();
+            let mut title = "ONEOFFICE HWPX 변환 문서".to_string();
+
+            for i in 0..hwpx.section_count() {
+                if let Ok(xml) = hwpx.section_xml(i) {
+                    let mut cursor = 0;
+                    while let Some(start) = xml[cursor..].find("<hp:t>") {
+                        let actual_start = cursor + start + 6;
+                        if let Some(end) = xml[actual_start..].find("</hp:t>") {
+                            let text = &xml[actual_start..actual_start + end];
+                            if !text.trim().is_empty() {
+                                if paragraphs.is_empty() {
+                                    title = text.trim().to_string();
+                                }
+                                paragraphs.push(text.trim().to_string());
+                            }
+                            cursor = actual_start + end + 7;
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+            if paragraphs.is_empty() {
+                paragraphs.push("내용이 없는 문서입니다.".to_string());
+            }
+
+            let mut doc = wordcraft_doc::Document::new();
+            let mut body_blocks: Vec<Arc<wordcraft_doc::Block>> = Vec::new();
+            let title_para = wordcraft_doc::Paragraph::with_text(
+                &title,
+                wordcraft_doc::props::CharProps {
+                    size: Some(22.0),
+                    bold: Some(true),
+                    ..Default::default()
+                },
+            );
+            body_blocks.push(wordcraft_doc::para_block(title_para));
+            for text in &paragraphs {
+                let p = wordcraft_doc::Paragraph::with_text(
+                    text,
+                    wordcraft_doc::props::CharProps {
+                        size: Some(11.0),
+                        ..Default::default()
+                    },
+                );
+                body_blocks.push(wordcraft_doc::para_block(p));
+            }
+            doc.body = body_blocks;
+            let docx_bytes = wordcraft_docx::write(&doc)
+                .map_err(|e| McpError::Engine(format!("DOCX serialization failed: {e:?}")))?;
+
+            let result = json!({
+                "success": true,
+                "from_format": "hwpx",
+                "to_format": "docx",
+                "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "paragraphs_converted": paragraphs.len(),
+                "output_base64": BASE64.encode(&docx_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
         ("docx", "pdf") => {
             let doc = wordcraft_docx::read(&bytes)
                 .map_err(|e| McpError::Engine(format!("Failed to parse DOCX: {e}")))?;
@@ -1287,6 +1374,41 @@ fn handle_doc_convert(args: &Value) -> Result<McpToolResult, McpError> {
                 "mime_type": "application/pdf",
                 "paragraphs_converted": paragraphs.len(),
                 "output_base64": BASE64.encode(&pdf_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        ("docx", "hwpx") => {
+            let doc = wordcraft_docx::read(&bytes)
+                .map_err(|e| McpError::Engine(format!("Failed to parse DOCX: {e}")))?;
+            let mut paragraphs = Vec::new();
+            let mut title = "ONEOFFICE DOCX 변환 문서".to_string();
+
+            for block in &doc.body {
+                if let wordcraft_doc::Block::Para(p) = block.as_ref()
+                    && !p.text.trim().is_empty()
+                {
+                    if paragraphs.is_empty() {
+                        title = p.text.trim().to_string();
+                    }
+                    paragraphs.push(p.text.trim().to_string());
+                }
+            }
+            if paragraphs.is_empty() {
+                paragraphs.push("내용이 없는 문서입니다.".to_string());
+            }
+
+            let hwpx = HwpxPackage::create_minimal_hwpx(&title, &paragraphs.join("\n\n"))
+                .map_err(|e| McpError::Engine(format!("Failed to create HWPX from DOCX: {e}")))?;
+            let hwpx_bytes = hwpx.to_bytes()
+                .map_err(|e| McpError::Engine(format!("Failed to serialize HWPX: {e}")))?;
+
+            let result = json!({
+                "success": true,
+                "from_format": "docx",
+                "to_format": "hwpx",
+                "mime_type": "application/x-hwp+zip",
+                "paragraphs_converted": paragraphs.len(),
+                "output_base64": BASE64.encode(&hwpx_bytes),
             });
             Ok(McpToolResult::success_json(&result))
         }
@@ -1364,6 +1486,48 @@ fn handle_doc_convert(args: &Value) -> Result<McpToolResult, McpError> {
                 "to_format": "hwpx",
                 "mime_type": "application/x-hwp+zip",
                 "output_base64": BASE64.encode(&hwpx_bytes),
+            });
+            Ok(McpToolResult::success_json(&result))
+        }
+        ("md", "docx") => {
+            let md_str = String::from_utf8(bytes)
+                .map_err(|e| McpError::Engine(format!("Invalid UTF-8 in Markdown: {e}")))?;
+            let lines: Vec<&str> = md_str.lines().filter(|l| !l.trim().is_empty()).collect();
+            let title = lines.first().copied().unwrap_or("Markdown 변환 문서").trim_start_matches('#').trim();
+            let paragraphs: Vec<String> = lines.iter().skip(1).map(|l| l.to_string()).collect();
+
+            let mut doc = wordcraft_doc::Document::new();
+            let mut body_blocks: Vec<Arc<wordcraft_doc::Block>> = Vec::new();
+            let title_para = wordcraft_doc::Paragraph::with_text(
+                title,
+                wordcraft_doc::props::CharProps {
+                    size: Some(22.0),
+                    bold: Some(true),
+                    ..Default::default()
+                },
+            );
+            body_blocks.push(wordcraft_doc::para_block(title_para));
+            for text in &paragraphs {
+                let p = wordcraft_doc::Paragraph::with_text(
+                    text,
+                    wordcraft_doc::props::CharProps {
+                        size: Some(11.0),
+                        ..Default::default()
+                    },
+                );
+                body_blocks.push(wordcraft_doc::para_block(p));
+            }
+            doc.body = body_blocks;
+            let docx_bytes = wordcraft_docx::write(&doc)
+                .map_err(|e| McpError::Engine(format!("DOCX serialization failed: {e:?}")))?;
+
+            let result = json!({
+                "success": true,
+                "from_format": "md",
+                "to_format": "docx",
+                "mime_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                "paragraphs_converted": paragraphs.len() + 1,
+                "output_base64": BASE64.encode(&docx_bytes),
             });
             Ok(McpToolResult::success_json(&result))
         }
