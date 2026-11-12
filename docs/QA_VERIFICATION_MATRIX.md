@@ -42,6 +42,8 @@
 | **F-27** | Format Painter & Word Stats | 문서 서식 복사기(`📋 서식 복사`), 문단 서식 일괄 적용, 실시간 글자수/공백제외/단어수 통계 | `✅ Verified` | Wave 2: Track E | `test_format_painter_and_presenter_notes` & `show_status_bar` |
 | **F-28** | PDF Freehand & Rotation | PDF 마우스/스타일러스 자필 베지어 서명 패드(`✍ 자필 서명`), 부드러운 잉크 스트로크 날인, 90도 회전(`⟳ 회전`) | `✅ Verified` | Wave 1: Track D | `test_pdf_freehand_signature_stamping_and_rotation` & `stamp_freehand_signature_at` |
 | **F-29** | Presenter Notes | 슬라이드별 발표자 메모(Presenter Notes) 접이식 패널, 인플레이스 대본 편집 및 무손실 보존 | `✅ Verified` | Wave 2: Track E | `test_format_painter_and_presenter_notes` & `SlideItem.notes` |
+| **F-30** | Full MCP Suite | 통합 `oneoffice-mcp` 13대 표준 고수준 도구(`diagram.patch`, `pdf.find_anchors`, `calc.eval`, `doc.fill_fields`, `doc.convert`, `diagram.list_templates` 등) 및 90대 전수 MCP 에코시스템 | `✅ Verified` | Wave 2: Track F | `tests/stdio_integration.rs` & `oneoffice-mcp` 15대 단위 테스트 100% PASS |
+| **F-31** | Desktop Live Control | 네이티브 데스크톱 실시간 TCP 원격 제어 서버(`--control <port>`), JSON-Lines 비동기 소켓, 탭 전환·테마·수식 계산·인스펙션 GUI 브릿지 | `✅ Verified` | Wave 3: Track G | `apps/oneoffice-desktop/tests/control_e2e.rs` & `test_desktop_app_control_commands` |
 
 ---
 
