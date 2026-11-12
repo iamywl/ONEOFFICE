@@ -121,6 +121,45 @@ impl PdfViewerWidget {
     pub fn show(&mut self, ui: &mut Ui, ctx: &egui::Context) {
         self.ensure_sample_loaded(ctx);
 
+        // Keyboard shortcuts for page navigation and zoom
+        let ctrl_or_cmd = ui.input(|i| i.modifiers.command || i.modifiers.ctrl);
+        let total_pages = self.session.as_ref().map_or(1, |s| s.page_count());
+        if !ctrl_or_cmd {
+            if (ui.input(|i| i.key_pressed(egui::Key::PageDown)) || ui.input(|i| i.key_pressed(egui::Key::ArrowDown))) && self.current_page + 1 < total_pages {
+                self.current_page += 1;
+                self.selected_sig_id = None;
+                self.refresh_page_texture(ctx);
+            }
+            if (ui.input(|i| i.key_pressed(egui::Key::PageUp)) || ui.input(|i| i.key_pressed(egui::Key::ArrowUp))) && self.current_page > 0 {
+                self.current_page -= 1;
+                self.selected_sig_id = None;
+                self.refresh_page_texture(ctx);
+            }
+            if ui.input(|i| i.key_pressed(egui::Key::Home)) && self.current_page != 0 {
+                self.current_page = 0;
+                self.selected_sig_id = None;
+                self.refresh_page_texture(ctx);
+            }
+            if ui.input(|i| i.key_pressed(egui::Key::End)) && self.current_page + 1 < total_pages {
+                self.current_page = total_pages.saturating_sub(1);
+                self.selected_sig_id = None;
+                self.refresh_page_texture(ctx);
+            }
+        } else {
+            if (ui.input(|i| i.key_pressed(egui::Key::Plus)) || ui.input(|i| i.key_pressed(egui::Key::Equals))) && self.zoom_scale < 2.5 {
+                self.zoom_scale += 0.25;
+                self.refresh_page_texture(ctx);
+            }
+            if ui.input(|i| i.key_pressed(egui::Key::Minus)) && self.zoom_scale > 0.5 {
+                self.zoom_scale -= 0.25;
+                self.refresh_page_texture(ctx);
+            }
+            if ui.input(|i| i.key_pressed(egui::Key::Num0)) {
+                self.zoom_scale = 1.0;
+                self.refresh_page_texture(ctx);
+            }
+        }
+
         // Toolbar
         ui.horizontal(|ui| {
             if let Some(session) = &self.session {

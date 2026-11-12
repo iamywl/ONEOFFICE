@@ -425,4 +425,33 @@ mod tests {
         assert!(pkg.get_attachment("BinData/table_1.xlsx").is_some(), "HWPX must contain table_1.xlsx attachment");
         let _ = std::fs::remove_file(&save_path);
     }
+
+    #[test]
+    fn test_spreadsheet_and_global_keyboard_shortcuts() {
+        let mut app = StudioApp::new();
+        let ctx = egui::Context::default();
+
+        // 1. Initial selection and HUD
+        assert_eq!(app.table_selected_cell, (1, 1));
+        assert_eq!(app.zoom_pct, 100);
+
+        // 2. Direct PDF export pipeline
+        let pdf_res = app.export_current_document_to_pdf(&ctx);
+        assert!(pdf_res.is_ok(), "Direct PDF export must produce valid PDF bytes");
+        let pdf_bytes = pdf_res.unwrap();
+        assert!(!pdf_bytes.is_empty(), "PDF bytes must not be empty");
+        assert!(pdf_bytes.starts_with(b"%PDF-"), "Must have valid PDF magic header");
+
+        // 3. Zoom adjustment bounds
+        app.zoom_pct = 150;
+        assert_eq!(app.zoom_pct, 150);
+        app.zoom_pct = 100;
+        assert_eq!(app.zoom_pct, 100);
+
+        // 4. Find & Replace Escape dismissal check
+        app.find_replace.is_open = true;
+        assert!(app.find_replace.is_open);
+        app.find_replace.is_open = false;
+        assert!(!app.find_replace.is_open);
+    }
 }

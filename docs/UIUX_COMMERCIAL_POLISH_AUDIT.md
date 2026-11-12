@@ -45,6 +45,25 @@
   4. 모달 입력창 키 격리 및 다크/라이트 모드 WCAG AAA 명도 대비(14.05:1).
   5. 실제 HWPX(`외주용역서류 (2) 복사본.hwpx`) 클릭 편집 및 저장 라운드트립.
 
+### 2.5 상용 오피스급 키보드 내비게이션 & 단축키 에코시스템
+실무 오피스 사용자의 생산성을 극대화하기 위해 업계 표준 키보드 인터랙션을 전면 장착했습니다:
+1. **스프레드시트 셀 조작**:
+   - `ArrowUp` / `ArrowDown` / `ArrowLeft` / `ArrowRight`: 선택 셀 상하좌우 부드러운 포커스 이동 및 상단 Formula HUD 자동 연동.
+   - `Tab`: 우측 셀로 이동, `Enter`: 인라인 편집 내용 커밋 후 다음 행으로 커서 자동 전진.
+   - `F2`: 현재 셀 인라인 편집 모드 즉각 진입.
+   - `Delete` / `Backspace`: 현재 셀 내용 클리어 및 다단계 Undo 히스토리 보존.
+   - `Escape`: 인라인 편집 변경사항 취소 및 셀 뷰 복귀.
+2. **전역 인쇄 / PDF 직결 변환 (`Ctrl+P`)**:
+   - HWPX, DOCX, XLSX, PPTX 임의 문서에서 `Ctrl+P` 입력 시 즉각 무손실 벡터 PDF로 변환하여 순수 Rust 전자서명/직인 뷰어로 자동 전환.
+3. **인터랙티브 줌 컨트롤 & 단축키 (`Ctrl++`, `Ctrl+-`, `Ctrl+0`)**:
+   - 상태표시줄 우측에 `-`, `100%`, `+` 버튼을 배치하여 1클릭 배율 조절 및 원클릭 100% 초기화 지원.
+4. **프레젠테이션 & PDF 뷰어 내비게이션**:
+   - `PageDown` / `PageUp`, `Home` / `End` 키를 통한 초고속 슬라이드 및 PDF 페이지 열람.
+
+### 2.6 배포용 macOS DMG 패키징 파이프라인
+- `packaging/build-desktop.sh macos-dmg` 신설:
+  - `ONEOFFICE.app` 애플리케이션 번들(CFDocumentTypes 연동, AppIcon 포함)과 `/Applications` 심볼릭 링크를 수납한 17MB 압축 UDZO 배포용 DMG 인스톨러 생성 및 마운트 검증 완료.
+
 ---
 
 ## 3. 52종 전 기능 실측 스크린샷 갤러리 검증 결과
@@ -70,7 +89,7 @@
 
 1. **Rust Workspace 컴파일**: 0 errors
 2. **Clippy 린트 검사**: `cargo clippy --workspace --all-targets -- -D warnings` (0 warnings)
-3. **Rust 자동화 테스트**: 114개 전수 통과 (0 failed, 0 panic)
+3. **Rust 자동화 테스트**: 121개 전수 통과 (0 failed, 0 panic)
 4. **hanul-hwpx 단위 테스트**: 37개 전수 통과 (0 failed)
 5. **문서 무결성 하네스**: `node scripts/qa/verify-readme.mjs && node scripts/qa/doc_harness.mjs` (100% 통과, 0 warnings)
 6. **추적 매트릭스 (`QA_VERIFICATION_MATRIX.md`)**: **F-01부터 F-25까지 25개 전 핵심 기능 `✅ Verified` 100% 달성**

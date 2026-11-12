@@ -898,6 +898,34 @@ impl StudioApp {
         if ctrl_or_cmd && (ui.input(|i| i.key_pressed(egui::Key::F)) || ui.input(|i| i.key_pressed(egui::Key::H))) {
             self.find_replace.is_open = true;
         }
+        // Handle Escape to dismiss Find & Replace
+        if ui.input(|i| i.key_pressed(egui::Key::Escape)) && self.find_replace.is_open {
+            self.find_replace.is_open = false;
+        }
+        // Handle Ctrl+P for PDF direct export
+        if ctrl_or_cmd && ui.input(|i| i.key_pressed(egui::Key::P)) {
+            let ctx = ui.ctx().clone();
+            match self.export_current_document_to_pdf(&ctx) {
+                Ok(bytes) => {
+                    let _ = self.pdf_widget.load_pdf_bytes(&ctx, &bytes);
+                    self.active_doc = ActiveDocumentKind::Pdf;
+                    self.status_text = "PDF 컴파일 및 전자서명 뷰어로 즉시 변환 완료 (Ctrl+P)".to_string();
+                }
+                Err(err) => {
+                    self.status_text = format!("PDF 내보내기 실패: {err}");
+                }
+            }
+        }
+        // Global Zoom shortcuts: Ctrl++, Ctrl+-, Ctrl+0
+        if ctrl_or_cmd {
+            if ui.input(|i| i.key_pressed(egui::Key::Plus)) || ui.input(|i| i.key_pressed(egui::Key::Equals)) {
+                self.zoom_pct = (self.zoom_pct + 10).min(200);
+            } else if ui.input(|i| i.key_pressed(egui::Key::Minus)) {
+                self.zoom_pct = self.zoom_pct.saturating_sub(10).max(50);
+            } else if ui.input(|i| i.key_pressed(egui::Key::Num0)) {
+                self.zoom_pct = 100;
+            }
+        }
 
         ui.vertical(|ui| {
             // 1. Top Header Glass Bar
@@ -2208,7 +2236,7 @@ impl StudioApp {
         }
     }
 
-    fn show_status_bar(&self, ui: &mut Ui) {
+    fn show_status_bar(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             ui.label(
                 RichText::new("●")
@@ -2284,6 +2312,29 @@ impl StudioApp {
                         .size(10.0)
                         .color(Color32::from_rgb(100, 116, 139)),
                 );
+
+                ui.separator();
+
+                if ui.small_button("+").on_hover_text("확대 (Ctrl++)").clicked() {
+                    self.zoom_pct = (self.zoom_pct + 10).min(200);
+                    if self.active_doc == ActiveDocumentKind::Pdf && self.pdf_widget.zoom_scale < 2.5 {
+                        self.pdf_widget.zoom_scale += 0.25;
+                    }
+                }
+
+                if ui.small_button(format!("{}%", self.zoom_pct)).on_hover_text("배율 100% 초기화 (Ctrl+0)").clicked() {
+                    self.zoom_pct = 100;
+                    if self.active_doc == ActiveDocumentKind::Pdf {
+                        self.pdf_widget.zoom_scale = 1.0;
+                    }
+                }
+
+                if ui.small_button("-").on_hover_text("축소 (Ctrl+-)").clicked() {
+                    self.zoom_pct = self.zoom_pct.saturating_sub(10).max(50);
+                    if self.active_doc == ActiveDocumentKind::Pdf && self.pdf_widget.zoom_scale > 0.5 {
+                        self.pdf_widget.zoom_scale -= 0.25;
+                    }
+                }
             });
         });
     }
@@ -3147,8 +3198,71 @@ impl StudioApp {
                                             self.is_dirty = true;
                                         }
                                     }
+                                    // Move to next row after Enter commit
+                                    let next_r = (r + 1).min(total_rows.saturating_sub(1));
+                                    self.table_selected_cell = (next_r, c);
+                                    let col_letter = if c < 26 {
+                                        ((b'A' + c as u8) as char).to_string()
+                                    } else {
+                                        format!("A{}", (b'A' + (c - 26) as u8) as char)
+                                    };
+                                    self.formula_hud.cell_address = format!("{col_letter}{}", next_r + 1);
+                                    if let Some(val) = self.table_data.get(next_r).and_then(|row| row.get(c)) {
+                                        self.formula_hud.formula_text = val.clone();
+                                    }
                                 }
                                 self.inline_editing_cell = None;
+                            }
+
+                            if self.inline_editing_cell.is_some() && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                                self.inline_editing_cell = None;
+                            }
+
+                            if self.inline_editing_cell.is_none() {
+                                let (mut r, mut c) = self.table_selected_cell;
+                                let mut nav_changed = false;
+                                if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+                                    r = r.saturating_sub(1);
+                                    nav_changed = true;
+                                } else if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) || ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                    r = (r + 1).min(total_rows.saturating_sub(1));
+                                    nav_changed = true;
+                                } else if ui.input(|i| i.key_pressed(egui::Key::ArrowLeft)) {
+                                    c = c.saturating_sub(1);
+                                    nav_changed = true;
+                                } else if ui.input(|i| i.key_pressed(egui::Key::ArrowRight)) || ui.input(|i| i.key_pressed(egui::Key::Tab)) {
+                                    c = (c + 1).min(total_cols.saturating_sub(1));
+                                    nav_changed = true;
+                                } else if ui.input(|i| i.key_pressed(egui::Key::F2)) {
+                                    let cell_val = self.table_data.get(r).and_then(|row| row.get(c)).cloned().unwrap_or_default();
+                                    self.inline_editing_cell = Some((r, c));
+                                    self.cell_edit_buffer = cell_val;
+                                } else if ui.input(|i| i.key_pressed(egui::Key::Delete) || i.key_pressed(egui::Key::Backspace)) {
+                                    let should_clear = self.table_data.get(r).and_then(|row| row.get(c)).is_some_and(|cell| !cell.is_empty());
+                                    if should_clear {
+                                        self.push_undo_snapshot();
+                                        if let Some(row) = self.table_data.get_mut(r)
+                                            && let Some(cell) = row.get_mut(c)
+                                        {
+                                            *cell = String::new();
+                                            self.recalculate_table_sums();
+                                            self.is_dirty = true;
+                                        }
+                                    }
+                                }
+
+                                if nav_changed {
+                                    self.table_selected_cell = (r, c);
+                                    let col_letter = if c < 26 {
+                                        ((b'A' + c as u8) as char).to_string()
+                                    } else {
+                                        format!("A{}", (b'A' + (c - 26) as u8) as char)
+                                    };
+                                    self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
+                                    if let Some(val) = self.table_data.get(r).and_then(|row| row.get(c)) {
+                                        self.formula_hud.formula_text = val.clone();
+                                    }
+                                }
                             }
 
                             if let Some((r, c, v)) = start_edit {
@@ -3191,6 +3305,21 @@ impl StudioApp {
             Some(m) => m,
             None => return,
         };
+
+        // Keyboard navigation for presentation slides (PageUp / PageDown)
+        let ctrl_or_cmd = ui.input(|i| i.modifiers.command || i.modifiers.ctrl);
+        if !ctrl_or_cmd {
+            if (ui.input(|i| i.key_pressed(egui::Key::PageDown)) || ui.input(|i| i.key_pressed(egui::Key::ArrowDown)))
+                && model.active_slide_index + 1 < model.slides.len()
+            {
+                model.active_slide_index += 1;
+            }
+            if (ui.input(|i| i.key_pressed(egui::Key::PageUp)) || ui.input(|i| i.key_pressed(egui::Key::ArrowUp)))
+                && model.active_slide_index > 0
+            {
+                model.active_slide_index -= 1;
+            }
+        }
 
         ui.vertical(|ui| {
             // Presentation Toolbar

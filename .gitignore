@@ -20,6 +20,8 @@ extensions/oneoffice-vscode/dist/extension.js.map
 out/
 
 # Large Distributable Packages & Local Installers (Reproducible via build scripts)
+dist/
+**/dist/
 *.dmg
 *.msi
 *.AppImage
