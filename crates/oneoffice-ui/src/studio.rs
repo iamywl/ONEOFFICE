@@ -98,12 +98,32 @@ pub struct LoadedSpreadsheet {
 }
 
 /// Parsed slide item in a loaded presentation.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SlideItem {
     pub slide_number: usize,
     pub title: String,
     pub bullet_points: Vec<String>,
     pub template_id: String,
+    pub notes: String,
+}
+
+impl SlideItem {
+    /// Constructs a new slide item with empty presenter notes.
+    #[must_use]
+    pub fn new(
+        slide_number: usize,
+        title: String,
+        bullet_points: Vec<String>,
+        template_id: String,
+    ) -> Self {
+        Self {
+            slide_number,
+            title,
+            bullet_points,
+            template_id,
+            notes: String::new(),
+        }
+    }
 }
 
 /// Parsed presentation slide deck.
@@ -192,6 +212,9 @@ pub struct StudioApp {
     pub undo_stack: Vec<DocumentSnapshot>,
     pub redo_stack: Vec<DocumentSnapshot>,
     pub find_replace: FindReplaceState,
+    pub table_selected_range: Option<((usize, usize), (usize, usize))>,
+    pub clipboard_format: Option<TextFormatState>,
+    pub is_format_painter_active: bool,
 }
 
 impl Default for StudioApp {
@@ -285,6 +308,9 @@ impl StudioApp {
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
             find_replace: FindReplaceState::default(),
+            table_selected_range: None,
+            clipboard_format: None,
+            is_format_painter_active: false,
         };
 
         // Initialize default presentation model
@@ -300,6 +326,7 @@ impl StudioApp {
                         "컨설팅급 제안서 도식화 및 26종 엑셀 차트 인플레이스 연동".to_string(),
                     ],
                     template_id: "problem-comparison-to-solution".to_string(),
+                    notes: "발표 팁: 1페이지에서는 올인원 오피스 통합 플랫폼의 비전과 5대 지원 포맷을 강조할 것.".to_string(),
                 },
                 SlideItem {
                     slide_number: 2,
@@ -310,6 +337,7 @@ impl StudioApp {
                         "WASM 및 네이티브 듀얼 런타임으로 단일 코드베이스 유지".to_string(),
                     ],
                     template_id: "as-is-to-be-comparison".to_string(),
+                    notes: "배경 설명 시 기존 한컴/오피스 간 캡처 이미지 붙여넣기로 인한 수정 불가 문제를 부각할 것.".to_string(),
                 },
             ],
             active_slide_index: 0,
@@ -587,6 +615,106 @@ impl StudioApp {
             self.is_dirty = true;
             let col_ch = if c < 26 { (b'A' + c as u8) as char } else { '?' };
             self.status_text = format!("{col_ch}열 데이터 개수: {count}건 계산 완료");
+        }
+    }
+
+    /// Returns the effective cell range `((min_r, min_c), (max_r, max_c))` based on selection.
+    #[must_use]
+    pub fn effective_selected_range(&self) -> ((usize, usize), (usize, usize)) {
+        if let Some(((r1, c1), (r2, c2))) = self.table_selected_range {
+            ((r1.min(r2), c1.min(c2)), (r1.max(r2), c1.max(c2)))
+        } else {
+            (self.table_selected_cell, self.table_selected_cell)
+        }
+    }
+
+    /// Computes summary metrics for cells within the effective selected range:
+    /// `(total_cells, numeric_count, sum, avg, min, max)`
+    #[must_use]
+    pub fn selection_range_stats(&self) -> Option<(usize, usize, f64, f64, f64, f64)> {
+        let ((min_r, min_c), (max_r, max_c)) = self.effective_selected_range();
+        let total_cells = (max_r - min_r + 1) * (max_c - min_c + 1);
+        if total_cells <= 1 {
+            return None;
+        }
+        let mut count = 0usize;
+        let mut sum = 0.0;
+        let mut min_val = f64::MAX;
+        let mut max_val = f64::MIN;
+        for r in min_r..=max_r {
+            for c in min_c..=max_c {
+                if let Some(val_str) = self.table_data.get(r).and_then(|row| row.get(c)) {
+                    let clean = val_str.trim().replace(['₩', ',', '%', ' '], "");
+                    if let Ok(v) = clean.parse::<f64>() {
+                        sum += v;
+                        count += 1;
+                        if v < min_val {
+                            min_val = v;
+                        }
+                        if v > max_val {
+                            max_val = v;
+                        }
+                    }
+                }
+            }
+        }
+        if count > 0 {
+            let avg = sum / count as f64;
+            Some((total_cells, count, sum, avg, min_val, max_val))
+        } else {
+            Some((total_cells, 0, 0.0, 0.0, 0.0, 0.0))
+        }
+    }
+
+    /// Sorts the spreadsheet data rows by the selected column (preserving header and summary rows).
+    pub fn sort_selected_column(&mut self, ascending: bool) {
+        let (_, c) = self.table_selected_cell;
+        if self.table_data.len() <= 2 {
+            return;
+        }
+        self.push_undo_snapshot();
+
+        let has_summary_row = self
+            .table_data
+            .last()
+            .and_then(|r| r.first())
+            .is_some_and(|label| label.contains("합계") || label.contains("평균"));
+
+        let end_idx = if has_summary_row {
+            self.table_data.len().saturating_sub(1)
+        } else {
+            self.table_data.len()
+        };
+
+        if end_idx > 2 {
+            let mut slice = self.table_data[1..end_idx].to_vec();
+            slice.sort_by(|row_a, row_b| {
+                let val_a = row_a.get(c).map(|s| s.trim()).unwrap_or("");
+                let val_b = row_b.get(c).map(|s| s.trim()).unwrap_or("");
+                let clean_a = val_a.replace(['₩', ',', '%', ' '], "");
+                let clean_b = val_b.replace(['₩', ',', '%', ' '], "");
+
+                let ord = match (clean_a.parse::<f64>(), clean_b.parse::<f64>()) {
+                    (Ok(num_a), Ok(num_b)) => {
+                        num_a.partial_cmp(&num_b).unwrap_or(std::cmp::Ordering::Equal)
+                    }
+                    _ => val_a.cmp(val_b),
+                };
+                if ascending {
+                    ord
+                } else {
+                    ord.reverse()
+                }
+            });
+
+            for (i, row) in slice.into_iter().enumerate() {
+                self.table_data[1 + i] = row;
+            }
+            self.recalculate_table_sums();
+            self.is_dirty = true;
+            let col_ch = if c < 26 { (b'A' + c as u8) as char } else { '?' };
+            let dir_str = if ascending { "오름차순" } else { "내림차순" };
+            self.status_text = format!("{col_ch}열 기준 {dir_str} 정렬 완료");
         }
     }
 
@@ -1360,6 +1488,7 @@ impl StudioApp {
                             title,
                             bullet_points: body_bullets,
                             template_id: "problem-comparison-to-solution".to_string(),
+                            notes: String::new(),
                         });
                     }
                 }
@@ -1376,6 +1505,7 @@ impl StudioApp {
                     "컨설팅급 제안서 도식화 및 26종 엑셀 차트 인플레이스 연동".to_string(),
                 ],
                 template_id: "problem-comparison-to-solution".to_string(),
+                notes: "발표 팁: 1페이지에서는 올인원 오피스 통합 플랫폼의 비전과 5대 지원 포맷을 강조할 것.".to_string(),
             });
         }
 
@@ -1995,6 +2125,18 @@ impl StudioApp {
                         self.apply_format_to_active_paragraph();
                     }
 
+                    // Format Painter toggle
+                    let painter_btn = ui.selectable_label(self.is_format_painter_active, "📋 서식 복사");
+                    if painter_btn.on_hover_text("서식 복사기 (클릭 후 적용할 문단 선택)").clicked() {
+                        self.is_format_painter_active = !self.is_format_painter_active;
+                        if self.is_format_painter_active {
+                            self.clipboard_format = Some(self.format_state.clone());
+                            self.status_text = "서식 복사됨: 서식을 적용할 문단을 클릭하십시오.".to_string();
+                        } else {
+                            self.status_text = "서식 복사기가 해제되었습니다.".to_string();
+                        }
+                    }
+
                     ui.separator();
 
                     if ui.button("+ 새 문단").on_hover_text("새 문단 추가").clicked() {
@@ -2116,6 +2258,15 @@ impl StudioApp {
 
                     ui.separator();
 
+                    if ui.button("↑ A-Z 정렬").on_hover_text("선택 열 기준 오름차순 정렬").clicked() {
+                        self.sort_selected_column(true);
+                    }
+                    if ui.button("↓ Z-A 정렬").on_hover_text("선택 열 기준 내림차순 정렬").clicked() {
+                        self.sort_selected_column(false);
+                    }
+
+                    ui.separator();
+
                     if ui.button("+ 26종 차트 생성").on_hover_text("시트 데이터 기반 26종 벡터 차트 생성").clicked() {
                         self.push_undo_snapshot();
                         self.chart_widget.is_visible = true;
@@ -2135,6 +2286,7 @@ impl StudioApp {
                                 title: format!("슬라이드 {n}: 주요 추진 전략"),
                                 bullet_points: vec!["핵심 가치 및 마일스톤 기술".to_string()],
                                 template_id: "problem-comparison-to-solution".to_string(),
+                                notes: String::new(),
                             });
                             pres.active_slide_index = n - 1;
                             self.is_dirty = true;
@@ -2263,6 +2415,12 @@ impl StudioApp {
                         self.is_dirty = true;
                         self.status_text = "지정 위치에 대표이사 직인을 날인했습니다.".to_string();
                     }
+                    if ui.button("✍ 자필 서명").on_hover_text("마우스/스타일러스 자필 베지어 서명 패드").clicked() {
+                        self.pdf_widget.freehand_pad_open = !self.pdf_widget.freehand_pad_open;
+                    }
+                    if ui.button("⟳ 회전").on_hover_text("페이지 90° 시계방향 회전").clicked() {
+                        self.pdf_widget.rotation_deg = (self.pdf_widget.rotation_deg + 90.0) % 360.0;
+                    }
                     let can_undo = self.pdf_widget.layer_stack.can_undo();
                     let undo_sig_btn = ui.add_enabled(can_undo, egui::Button::new("서명 취소"));
                     if undo_sig_btn.on_hover_text("가장 최근 날인된 직인/서명 취소").clicked() {
@@ -2385,10 +2543,19 @@ impl StudioApp {
                     let char_count: usize = self.doc_model.as_ref().map_or(0, |m| {
                         m.paragraphs.iter().map(|p| p.text.chars().count()).sum()
                     });
+                    let char_count_nospace: usize = self.doc_model.as_ref().map_or(0, |m| {
+                        m.paragraphs.iter().map(|p| p.text.chars().filter(|c| !c.is_whitespace()).count()).sum()
+                    });
+                    let word_count: usize = self.doc_model.as_ref().map_or(0, |m| {
+                        m.paragraphs.iter().map(|p| p.text.split_whitespace().count()).sum()
+                    });
                     ui.label(
-                        RichText::new(format!("문단: {p_count}개 | 글자수: {char_count}자 | 확대: {}%", self.zoom_pct))
-                            .size(10.5)
-                            .color(Color32::from_rgb(100, 116, 139)),
+                        RichText::new(format!(
+                            "문단: {p_count}개 | 단어: {word_count}단어 | 글자수: {char_count}자 (공백제외 {char_count_nospace}자) | 확대: {}%",
+                            self.zoom_pct
+                        ))
+                        .size(10.5)
+                        .color(Color32::from_rgb(100, 116, 139)),
                     );
                 }
                 ActiveDocumentKind::Xlsx => {
@@ -2402,11 +2569,39 @@ impl StudioApp {
                     let rows = self.table_data.len();
                     let cols = self.table_data.first().map_or(0, |r| r.len());
                     let sheet_name = self.spreadsheet_model.as_ref().and_then(|s| s.sheet_names.get(s.active_sheet_index)).map(|x| x.as_str()).unwrap_or("Sheet1");
-                    ui.label(
-                        RichText::new(format!("활성 셀: [{cell_name}] | 시트: {sheet_name} | 크기: {rows}행 × {cols}열 | 확대: {}%", self.zoom_pct))
-                            .size(10.5)
-                            .color(Color32::from_rgb(100, 116, 139)),
-                    );
+
+                    if let Some((total, num_count, sum, avg, min_v, max_v)) = self.selection_range_stats() {
+                        let ((min_r, min_c), (max_r, max_c)) = self.effective_selected_range();
+                        let c1 = if min_c < 26 { ((b'A' + min_c as u8) as char).to_string() } else { format!("A{}", (b'A' + (min_c - 26) as u8) as char) };
+                        let c2 = if max_c < 26 { ((b'A' + max_c as u8) as char).to_string() } else { format!("A{}", (b'A' + (max_c - 26) as u8) as char) };
+                        let range_label = format!("{c1}{}:{c2}{}", min_r + 1, max_r + 1);
+                        if num_count > 0 {
+                            ui.label(
+                                RichText::new(format!(
+                                    "선택 범위: [{range_label}] ({total}셀) | 숫자: {num_count}개 | 합계: {} | 평균: {:.1} | 최소: {} | 최대: {}",
+                                    Self::format_with_commas(sum as i64),
+                                    avg,
+                                    Self::format_with_commas(min_v as i64),
+                                    Self::format_with_commas(max_v as i64),
+                                ))
+                                .size(10.5)
+                                .strong()
+                                .color(Color32::from_rgb(52, 211, 153)),
+                            );
+                        } else {
+                            ui.label(
+                                RichText::new(format!("선택 범위: [{range_label}] ({total}개 셀 선택)"))
+                                    .size(10.5)
+                                    .color(Color32::from_rgb(100, 116, 139)),
+                            );
+                        }
+                    } else {
+                        ui.label(
+                            RichText::new(format!("활성 셀: [{cell_name}] | 시트: {sheet_name} | 크기: {rows}행 × {cols}열 | 확대: {}%", self.zoom_pct))
+                                .size(10.5)
+                                .color(Color32::from_rgb(100, 116, 139)),
+                        );
+                    }
                 }
                 ActiveDocumentKind::Pptx => {
                     if let Some(pres) = &self.presentation_model {
@@ -2510,6 +2705,7 @@ impl StudioApp {
                     let mut insert_image = false;
                     let mut insert_chart = false;
                     let mut insert_diagram = false;
+                    let mut apply_format_painter_idx = None;
 
                     // Render document title and metadata
                     if let Some(doc) = &mut self.doc_model {
@@ -2537,6 +2733,8 @@ impl StudioApp {
                         let mut move_down_idx = None;
                         let mut duplicate_idx = None;
                         let mut delete_idx = None;
+                        let mut select_para_idx = None;
+                        let is_painter_active = self.is_format_painter_active;
                         let total_paras = doc.paragraphs.len();
 
                         for (idx, para) in doc.paragraphs.iter_mut().enumerate() {
@@ -2660,20 +2858,39 @@ impl StudioApp {
                                             .sense(egui::Sense::click()),
                                     );
                                     if resp.clicked() {
-                                        self.active_paragraph_idx = Some(idx);
-                                        self.format_state.font_size = para.font_size;
-                                        self.format_state.is_bold = para.is_bold;
-                                        self.format_state.is_italic = para.is_italic;
-                                        self.format_state.is_underline = para.is_underline;
-                                        self.format_state.is_strikethrough = para.is_strikethrough;
-                                        self.format_state.text_color = para.text_color;
-                                        self.format_state.highlight_color = para.highlight_color;
-                                        self.format_state.font_family = para.font_family.clone();
-                                        self.format_state.align = para.align;
+                                        if is_painter_active {
+                                            apply_format_painter_idx = Some(idx);
+                                        } else {
+                                            select_para_idx = Some((
+                                                idx,
+                                                para.font_size,
+                                                para.is_bold,
+                                                para.is_italic,
+                                                para.is_underline,
+                                                para.is_strikethrough,
+                                                para.text_color,
+                                                para.highlight_color,
+                                                para.font_family.clone(),
+                                                para.align,
+                                            ));
+                                        }
                                     }
                                 });
                             }
                             ui.add_space(4.0);
+                        }
+
+                        if let Some((idx, font_size, bold, italic, underline, strike, color, hl, family, align)) = select_para_idx {
+                            self.active_paragraph_idx = Some(idx);
+                            self.format_state.font_size = font_size;
+                            self.format_state.is_bold = bold;
+                            self.format_state.is_italic = italic;
+                            self.format_state.is_underline = underline;
+                            self.format_state.is_strikethrough = strike;
+                            self.format_state.text_color = color;
+                            self.format_state.highlight_color = hl;
+                            self.format_state.font_family = family;
+                            self.format_state.align = align;
                         }
 
                         if let Some(up) = move_up_idx
@@ -2876,6 +3093,28 @@ impl StudioApp {
                         );
                         ui.separator();
                         ui.add_space(8.0);
+                    }
+
+                    if let Some(target_idx) = apply_format_painter_idx {
+                        self.push_undo_snapshot();
+                        if let Some(doc) = &mut self.doc_model
+                            && let Some(para) = doc.paragraphs.get_mut(target_idx)
+                            && let Some(fmt) = self.clipboard_format.clone()
+                        {
+                            para.font_size = fmt.font_size;
+                            para.is_bold = fmt.is_bold;
+                            para.is_italic = fmt.is_italic;
+                            para.is_underline = fmt.is_underline;
+                            para.is_strikethrough = fmt.is_strikethrough;
+                            para.text_color = fmt.text_color;
+                            para.highlight_color = fmt.highlight_color;
+                            para.font_family = fmt.font_family.clone();
+                            para.align = fmt.align;
+                            self.format_state = fmt;
+                            self.is_dirty = true;
+                            self.is_format_painter_active = false;
+                            self.status_text = format!("문단 #{}에 서식이 성공적으로 적용되었습니다.", target_idx + 1);
+                        }
                     }
 
                     if add_new_para {
@@ -3181,6 +3420,7 @@ impl StudioApp {
                             let mut clicked_cell = None;
                             let mut start_edit = None;
                             let mut commit_edit = false;
+                            let ((min_r, min_c), (max_r, max_c)) = self.effective_selected_range();
 
                             for row_idx in 0..total_rows {
                                 // Row Header: 1, 2, 3...
@@ -3207,7 +3447,8 @@ impl StudioApp {
                                     });
 
                                 for col_idx in 0..total_cols {
-                                    let is_selected = self.table_selected_cell == (row_idx, col_idx);
+                                    let is_anchor = self.table_selected_cell == (row_idx, col_idx);
+                                    let is_in_range = row_idx >= min_r && row_idx <= max_r && col_idx >= min_c && col_idx <= max_c;
                                     let is_editing = self.inline_editing_cell == Some((row_idx, col_idx));
 
                                     let cell_val = self
@@ -3217,10 +3458,15 @@ impl StudioApp {
                                         .cloned()
                                         .unwrap_or_default();
 
-                                    let cell_bg = if is_selected {
+                                    let cell_bg = if is_anchor {
                                         match self.theme {
                                             StudioTheme::Dark => Color32::from_rgb(30, 58, 138),
                                             StudioTheme::Light => Color32::from_rgb(219, 234, 254),
+                                        }
+                                    } else if is_in_range {
+                                        match self.theme {
+                                            StudioTheme::Dark => Color32::from_rgb(23, 37, 84),
+                                            StudioTheme::Light => Color32::from_rgb(235, 243, 255),
                                         }
                                     } else {
                                         match self.theme {
@@ -3241,8 +3487,10 @@ impl StudioApp {
                                         }
                                     };
 
-                                    let cell_border = if is_selected {
+                                    let cell_border = if is_anchor {
                                         egui::Stroke::new(2.0, Color32::from_rgb(37, 99, 235))
+                                    } else if is_in_range {
+                                        egui::Stroke::new(1.0, Color32::from_rgb(96, 165, 250))
                                     } else {
                                         egui::Stroke::new(
                                             0.5,
@@ -3276,7 +3524,7 @@ impl StudioApp {
                                                     cell_val.clone()
                                                 };
 
-                                                let text_color = if is_selected {
+                                                let text_color = if is_anchor || is_in_range {
                                                     Color32::from_rgb(37, 99, 235)
                                                 } else if is_num {
                                                     match self.theme {
@@ -3300,7 +3548,8 @@ impl StudioApp {
                                                 };
 
                                                 if resp.clicked() {
-                                                    clicked_cell = Some((row_idx, col_idx));
+                                                    let is_shift = ui.input(|i| i.modifiers.shift);
+                                                    clicked_cell = Some((row_idx, col_idx, is_shift));
                                                 }
                                                 if resp.double_clicked() {
                                                     start_edit = Some((row_idx, col_idx, cell_val));
@@ -3380,32 +3629,60 @@ impl StudioApp {
                                 }
 
                                 if nav_changed {
-                                    self.table_selected_cell = (r, c);
-                                    let col_letter = if c < 26 {
-                                        ((b'A' + c as u8) as char).to_string()
+                                    let is_shift = ui.input(|i| i.modifiers.shift);
+                                    if is_shift {
+                                        self.table_selected_range = Some((self.table_selected_cell, (r, c)));
                                     } else {
-                                        format!("A{}", (b'A' + (c - 26) as u8) as char)
-                                    };
-                                    self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
-                                    if let Some(val) = self.table_data.get(r).and_then(|row| row.get(c)) {
-                                        self.formula_hud.formula_text = val.clone();
+                                        self.table_selected_cell = (r, c);
+                                        self.table_selected_range = None;
+                                    }
+
+                                    let ((r1, c1), (r2, c2)) = self.effective_selected_range();
+                                    if r1 != r2 || c1 != c2 {
+                                        let col1 = if c1 < 26 { ((b'A' + c1 as u8) as char).to_string() } else { format!("A{}", (b'A' + (c1 - 26) as u8) as char) };
+                                        let col2 = if c2 < 26 { ((b'A' + c2 as u8) as char).to_string() } else { format!("A{}", (b'A' + (c2 - 26) as u8) as char) };
+                                        self.formula_hud.cell_address = format!("{col1}{}:{col2}{}", r1 + 1, r2 + 1);
+                                    } else {
+                                        let col_letter = if c < 26 {
+                                            ((b'A' + c as u8) as char).to_string()
+                                        } else {
+                                            format!("A{}", (b'A' + (c - 26) as u8) as char)
+                                        };
+                                        self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
+                                        if let Some(val) = self.table_data.get(r).and_then(|row| row.get(c)) {
+                                            self.formula_hud.formula_text = val.clone();
+                                        }
                                     }
                                 }
                             }
 
                             if let Some((r, c, v)) = start_edit {
                                 self.table_selected_cell = (r, c);
+                                self.table_selected_range = None;
                                 self.inline_editing_cell = Some((r, c));
                                 self.cell_edit_buffer = v;
                             }
 
-                            if let Some((r, c)) = clicked_cell {
-                                self.table_selected_cell = (r, c);
+                            if let Some((r, c, is_shift)) = clicked_cell {
+                                if is_shift {
+                                    self.table_selected_range = Some((self.table_selected_cell, (r, c)));
+                                } else {
+                                    self.table_selected_cell = (r, c);
+                                    self.table_selected_range = None;
+                                }
                                 self.inline_editing_cell = None;
-                                let col_letter = (b'A' + c as u8) as char;
-                                self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
-                                if let Some(val) = self.table_data.get(r).and_then(|row| row.get(c)) {
-                                    self.formula_hud.formula_text = val.clone();
+
+                                let ((r1, c1), (r2, c2)) = self.effective_selected_range();
+                                if r1 != r2 || c1 != c2 {
+                                    let col1 = if c1 < 26 { ((b'A' + c1 as u8) as char).to_string() } else { format!("A{}", (b'A' + (c1 - 26) as u8) as char) };
+                                    let col2 = if c2 < 26 { ((b'A' + c2 as u8) as char).to_string() } else { format!("A{}", (b'A' + (c2 - 26) as u8) as char) };
+                                    self.formula_hud.cell_address = format!("{col1}{}:{col2}{}", r1 + 1, r2 + 1);
+                                } else {
+                                    let col_letter = if c < 26 { ((b'A' + c as u8) as char).to_string() } else { format!("A{}", (b'A' + (c - 26) as u8) as char) };
+                                    self.formula_hud.cell_address = format!("{col_letter}{}", r + 1);
+                                    if let Some(val) = self.table_data.get(r).and_then(|row| row.get(c)) {
+                                        self.formula_hud.formula_text = val.clone();
+                                    }
                                 }
                             }
                         });
@@ -3419,11 +3696,31 @@ impl StudioApp {
                 } else {
                     format!("A{}", (b'A' + (c - 26) as u8) as char)
                 };
-                ui.label(
-                    RichText::new(format!("READY · 활성 셀 [{col_letter}{}] · 시트 크기 18×12 · 513개 엑셀 수식 및 차트 엔진 가동 중", r + 1))
+
+                if let Some((total, num_count, sum, avg, min_v, max_v)) = self.selection_range_stats() {
+                    let ((r1, c1), (r2, c2)) = self.effective_selected_range();
+                    let col1 = if c1 < 26 { ((b'A' + c1 as u8) as char).to_string() } else { format!("A{}", (b'A' + (c1 - 26) as u8) as char) };
+                    let col2 = if c2 < 26 { ((b'A' + c2 as u8) as char).to_string() } else { format!("A{}", (b'A' + (c2 - 26) as u8) as char) };
+                    let range_lbl = format!("{col1}{}:{col2}{}", r1 + 1, r2 + 1);
+                    ui.label(
+                        RichText::new(format!(
+                            "READY · 선택 범위 [{range_lbl}] ({total}셀, 숫자 {num_count}개) · 합계: {} · 평균: {:.1} · 최소: {} · 최대: {}",
+                            Self::format_with_commas(sum as i64),
+                            avg,
+                            Self::format_with_commas(min_v as i64),
+                            Self::format_with_commas(max_v as i64),
+                        ))
                         .size(11.0)
-                        .color(Color32::from_rgb(100, 116, 139)),
-                );
+                        .strong()
+                        .color(Color32::from_rgb(52, 211, 153)),
+                    );
+                } else {
+                    ui.label(
+                        RichText::new(format!("READY · 활성 셀 [{col_letter}{}] · 시트 크기 18×12 · 513개 엑셀 수식 및 차트 엔진 가동 중", r + 1))
+                            .size(11.0)
+                            .color(Color32::from_rgb(100, 116, 139)),
+                    );
+                }
             });
         });
     }
@@ -3460,6 +3757,7 @@ impl StudioApp {
                         title: format!("새 슬라이드 {num}"),
                         bullet_points: vec!["주요 제안 내용 및 목표 기술".to_string()],
                         template_id: "problem-comparison-to-solution".to_string(),
+                        notes: String::new(),
                     });
                     model.active_slide_index = num - 1;
                     self.is_dirty = true;
@@ -3684,6 +3982,25 @@ impl StudioApp {
                                 ui.add_space(12.0);
                                 // Inline presentation diagram sub-canvas
                                 self.diagram_widget.show(ui);
+
+                                ui.add_space(10.0);
+                                egui::CollapsingHeader::new(
+                                    RichText::new("📝 발표자 메모 (Presenter Notes)")
+                                        .size(11.5)
+                                        .strong()
+                                        .color(Color32::from_rgb(100, 116, 139)),
+                                )
+                                .default_open(true)
+                                .show(ui, |ui| {
+                                    let notes_edit = egui::TextEdit::multiline(&mut slide.notes)
+                                        .desired_rows(2)
+                                        .desired_width(f32::INFINITY)
+                                        .hint_text("슬라이드 발표 시 참고할 메모나 발표 대본을 입력하십시오...");
+                                    let resp = ui.add(notes_edit);
+                                    if resp.changed() {
+                                        self.is_dirty = true;
+                                    }
+                                });
                             });
                     }
                 });

@@ -2,7 +2,8 @@
 
 use egui::{Color32, Pos2, Rect, Stroke, TextureHandle, TextureOptions, Ui, Vec2};
 use oneoffice_pdf::{
-    PdfDocumentSession, PlacedSignature, SignatureLayerStack, SignaturePayload,
+    FreehandBezierSignature, FreehandStroke, PdfDocumentSession, PlacedSignature,
+    SignatureLayerStack, SignaturePayload, SignaturePoint,
     generate_cleanroom_seal_on_white_paper_png, remove_white_background, save_pdf_with_signatures,
 };
 
@@ -12,11 +13,15 @@ pub struct PdfViewerWidget {
     pub session: Option<PdfDocumentSession>,
     pub current_page: usize,
     pub zoom_scale: f32,
+    pub rotation_deg: f32,
     pub page_texture: Option<TextureHandle>,
     pub layer_stack: SignatureLayerStack,
     pub seal_label: String,
     pub status_message: String,
     pub selected_sig_id: Option<String>,
+    pub freehand_pad_open: bool,
+    pub freehand_strokes: Vec<Vec<[f32; 2]>>,
+    pub freehand_current_stroke: Vec<[f32; 2]>,
 }
 
 impl PdfViewerWidget {
@@ -27,11 +32,15 @@ impl PdfViewerWidget {
             session: None,
             current_page: 0,
             zoom_scale: 1.0,
+            rotation_deg: 0.0,
             page_texture: None,
             layer_stack: SignatureLayerStack::default(),
             seal_label: "대표이사\n원오피스".to_string(),
             status_message: "PDF 문서를 불러와 주십시오.".to_string(),
             selected_sig_id: None,
+            freehand_pad_open: false,
+            freehand_strokes: Vec::new(),
+            freehand_current_stroke: Vec::new(),
         }
     }
 
@@ -89,6 +98,56 @@ impl PdfViewerWidget {
         });
 
         self.status_message = format!("페이지 {}에 직인을 날인했습니다.", self.current_page + 1);
+        Ok(())
+    }
+
+    /// Stamps the buffered freehand drawing as a Bezier fountain-pen signature at the specified point.
+    pub fn stamp_freehand_signature_at(&mut self, x_pt: f32, y_pt: f32) -> Result<(), String> {
+        if self.freehand_strokes.is_empty() && self.freehand_current_stroke.is_empty() {
+            return Err("서명 패드에 입력된 자필 서명이 없습니다.".to_string());
+        }
+
+        let mut strokes_data = self.freehand_strokes.clone();
+        if !self.freehand_current_stroke.is_empty() {
+            strokes_data.push(self.freehand_current_stroke.clone());
+        }
+
+        let mut freehand_strokes = Vec::new();
+        for stroke in strokes_data {
+            if stroke.is_empty() {
+                continue;
+            }
+            let pts: Vec<SignaturePoint> = stroke
+                .iter()
+                .enumerate()
+                .map(|(idx, pt)| SignaturePoint::new(pt[0], pt[1], idx as f64 * 16.0))
+                .collect();
+            freehand_strokes.push(FreehandStroke::new(pts, 1.8));
+        }
+
+        if freehand_strokes.is_empty() {
+            return Err("유효한 서명 획이 없습니다.".to_string());
+        }
+
+        let bezier = FreehandBezierSignature::new(
+            freehand_strokes,
+            [15, 23, 42, 255],
+            [120.0, 48.0],
+        );
+
+        self.layer_stack.add_signature(PlacedSignature {
+            id: format!("freehand-{}", self.layer_stack.signatures().len() + 1),
+            page_index: self.current_page,
+            rect_pt: [x_pt, y_pt, 120.0, 48.0],
+            rotation_deg: 0.0,
+            opacity: 1.0,
+            payload: SignaturePayload::BezierStrokes(bezier),
+        });
+
+        self.freehand_strokes.clear();
+        self.freehand_current_stroke.clear();
+        self.freehand_pad_open = false;
+        self.status_message = format!("페이지 {}에 자필 서명을 날인했습니다.", self.current_page + 1);
         Ok(())
     }
 
@@ -194,6 +253,17 @@ impl PdfViewerWidget {
 
             ui.separator();
 
+            if ui.button("⟳ 회전").on_hover_text("페이지 90° 시계방향 회전").clicked() {
+                self.rotation_deg = (self.rotation_deg + 90.0) % 360.0;
+            }
+
+            let sig_pad_btn = ui.selectable_label(self.freehand_pad_open, "✍ 자필 서명");
+            if sig_pad_btn.on_hover_text("마우스/스타일러스 자필 베지어 서명 패드 토글").clicked() {
+                self.freehand_pad_open = !self.freehand_pad_open;
+            }
+
+            ui.separator();
+
             // Seal Label Customizer & Presets
             ui.label("직인 문구:");
             ui.add(egui::TextEdit::singleline(&mut self.seal_label).desired_width(120.0));
@@ -241,6 +311,94 @@ impl PdfViewerWidget {
             );
         });
 
+        // Freehand Signature Drawing Pad Panel
+        if self.freehand_pad_open {
+            ui.add_space(4.0);
+            egui::Frame::new()
+                .fill(Color32::from_rgb(248, 250, 252))
+                .stroke(Stroke::new(1.0, Color32::from_rgb(203, 213, 225)))
+                .corner_radius(egui::CornerRadius::same(6))
+                .inner_margin(8.0)
+                .show(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            egui::RichText::new("✍ 자필 서명 패드 (Freehand Signature Pad)")
+                                .strong()
+                                .color(Color32::from_rgb(30, 41, 59)),
+                        );
+                        if ui.button("지우기").on_hover_text("서명 내용 초기화").clicked() {
+                            self.freehand_strokes.clear();
+                            self.freehand_current_stroke.clear();
+                        }
+                        if ui.button("날인 적용").on_hover_text("현재 서명을 페이지에 날인").clicked() {
+                            let _ = self.stamp_freehand_signature_at(200.0, 700.0);
+                        }
+                        if ui.button("✕ 닫기").clicked() {
+                            self.freehand_pad_open = false;
+                        }
+                    });
+
+                    ui.add_space(4.0);
+                    let (resp, painter) = ui.allocate_painter(Vec2::new(320.0, 90.0), egui::Sense::drag());
+                    painter.rect_filled(resp.rect, 4.0, Color32::WHITE);
+                    painter.rect_stroke(resp.rect, 4.0, Stroke::new(1.0, Color32::from_rgb(226, 232, 240)), egui::StrokeKind::Outside);
+
+                    // Baseline guide line
+                    painter.line_segment(
+                        [
+                            Pos2::new(resp.rect.min.x + 16.0, resp.rect.min.y + 68.0),
+                            Pos2::new(resp.rect.max.x - 16.0, resp.rect.min.y + 68.0),
+                        ],
+                        Stroke::new(1.0, Color32::from_rgb(226, 232, 240)),
+                    );
+                    painter.text(
+                        Pos2::new(resp.rect.min.x + 20.0, resp.rect.min.y + 64.0),
+                        egui::Align2::LEFT_BOTTOM,
+                        "서명란 (Sign Here)",
+                        egui::FontId::proportional(11.0),
+                        Color32::from_rgb(203, 213, 225),
+                    );
+
+                    // Handle pointer dragging for freehand input
+                    if resp.dragged() {
+                        if let Some(pos) = resp.interact_pointer_pos()
+                            && resp.rect.contains(pos)
+                        {
+                            let rel_x = pos.x - resp.rect.min.x;
+                            let rel_y = pos.y - resp.rect.min.y;
+                            self.freehand_current_stroke.push([rel_x, rel_y]);
+                        }
+                    } else if resp.drag_stopped() && !self.freehand_current_stroke.is_empty() {
+                        let stroke = std::mem::take(&mut self.freehand_current_stroke);
+                        self.freehand_strokes.push(stroke);
+                    }
+
+                    // Paint finished strokes
+                    let ink_stroke = Stroke::new(2.5, Color32::from_rgb(15, 23, 42));
+                    for stroke in &self.freehand_strokes {
+                        for window in stroke.windows(2) {
+                            painter.line_segment(
+                                [
+                                    Pos2::new(resp.rect.min.x + window[0][0], resp.rect.min.y + window[0][1]),
+                                    Pos2::new(resp.rect.min.x + window[1][0], resp.rect.min.y + window[1][1]),
+                                ],
+                                ink_stroke,
+                            );
+                        }
+                    }
+                    // Paint current in-progress stroke
+                    for window in self.freehand_current_stroke.windows(2) {
+                        painter.line_segment(
+                            [
+                                Pos2::new(resp.rect.min.x + window[0][0], resp.rect.min.y + window[0][1]),
+                                Pos2::new(resp.rect.min.x + window[1][0], resp.rect.min.y + window[1][1]),
+                            ],
+                            ink_stroke,
+                        );
+                    }
+                });
+        }
+
         ui.add_space(8.0);
 
         // PDF Page view area with signature overlay (centered paper with crisp border)
@@ -283,21 +441,48 @@ impl PdfViewerWidget {
 
                                 let is_selected = self.selected_sig_id.as_deref() == Some(&sig.id);
 
-                                // Red seal indicator circle
-                                let center = sig_rect.center();
-                                let radius = (rw.min(rh) * self.zoom_scale) * 0.45;
-                                painter.circle_stroke(
-                                    center,
-                                    radius,
-                                    Stroke::new(2.0, Color32::from_rgb(220, 38, 38)),
-                                );
-                                painter.text(
-                                    center,
-                                    egui::Align2::CENTER_CENTER,
-                                    "印",
-                                    egui::FontId::proportional(14.0 * self.zoom_scale),
-                                    Color32::from_rgb(220, 38, 38),
-                                );
+                                match &sig.payload {
+                                    SignaturePayload::BezierStrokes(bezier) => {
+                                        let ink = Color32::from_rgba_premultiplied(
+                                            bezier.ink_color[0],
+                                            bezier.ink_color[1],
+                                            bezier.ink_color[2],
+                                            bezier.ink_color[3],
+                                        );
+                                        for stroke in &bezier.strokes {
+                                            let pts: Vec<Pos2> = stroke
+                                                .points
+                                                .iter()
+                                                .map(|p| Pos2::new(sig_rect.min.x + p.x * self.zoom_scale, sig_rect.min.y + p.y * self.zoom_scale))
+                                                .collect();
+                                            if pts.len() >= 2 {
+                                                for window in pts.windows(2) {
+                                                    painter.line_segment(
+                                                        [window[0], window[1]],
+                                                        Stroke::new((stroke.base_width_pt * self.zoom_scale).max(1.5), ink),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+                                    SignaturePayload::RgbaStamp(_) | SignaturePayload::QuickTextStamp(_) => {
+                                        // Red seal indicator circle
+                                        let center = sig_rect.center();
+                                        let radius = (rw.min(rh) * self.zoom_scale) * 0.45;
+                                        painter.circle_stroke(
+                                            center,
+                                            radius,
+                                            Stroke::new(2.0, Color32::from_rgb(220, 38, 38)),
+                                        );
+                                        painter.text(
+                                            center,
+                                            egui::Align2::CENTER_CENTER,
+                                            "印",
+                                            egui::FontId::proportional(14.0 * self.zoom_scale),
+                                            Color32::from_rgb(220, 38, 38),
+                                        );
+                                    }
+                                }
 
                                 // Selection highlight box
                                 if is_selected {

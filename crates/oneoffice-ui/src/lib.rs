@@ -28,6 +28,8 @@ pub use theme::StudioTheme;
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
+    use crate::studio::TextFormatState;
+    use egui::Color32;
 
     #[test]
     fn test_studio_app_initialization() {
@@ -139,12 +141,14 @@ mod tests {
             title: "수정된 첫 번째 슬라이드 제목".to_string(),
             bullet_points: vec!["새로운 불릿 항목 추가".to_string()],
             template_id: "problem-comparison-to-solution".to_string(),
+            notes: String::new(),
         });
         pres.slides.push(studio::SlideItem {
             slide_number: 2,
             title: "두 번째 슬라이드: 아키텍처".to_string(),
             bullet_points: vec!["순수 Rust 백엔드 연동".to_string(), "ECMA-376 패키징".to_string()],
             template_id: "problem-comparison-to-solution".to_string(),
+            notes: String::new(),
         });
         app.presentation_model = Some(pres);
         app.is_dirty = true;
@@ -481,5 +485,117 @@ mod tests {
         app.find_replace.match_case = true;
         app.perform_find_next();
         assert!(app.find_replace.status.contains("일치"));
+    }
+
+    #[test]
+    fn test_spreadsheet_range_selection_and_dynamic_statistics() {
+        let mut app = StudioApp::new();
+        app.active_doc = ActiveDocumentKind::Xlsx;
+
+        // Select range (row 1, col 1) to (row 2, col 2)
+        // (1, 1): "12500000", (1, 2): "4300000"
+        // (2, 1): "18200000", (2, 2): "6100000"
+        app.table_selected_cell = (1, 1);
+        app.table_selected_range = Some(((1, 1), (2, 2)));
+
+        let ((r1, c1), (r2, c2)) = app.effective_selected_range();
+        assert_eq!((r1, c1), (1, 1));
+        assert_eq!((r2, c2), (2, 2));
+
+        let stats = app.selection_range_stats();
+        assert!(stats.is_some(), "Stats must be computed for multi-cell range");
+        let (total_cells, num_count, sum, avg, min_v, max_v) = stats.unwrap();
+        assert_eq!(total_cells, 4);
+        assert_eq!(num_count, 4);
+        assert_eq!(sum, 41_100_000.0);
+        assert_eq!(avg, 10_275_000.0);
+        assert_eq!(min_v, 4_300_000.0);
+        assert_eq!(max_v, 18_200_000.0);
+
+        // Reverse corner selection check
+        app.table_selected_range = Some(((2, 2), (1, 1)));
+        let ((min_r, min_c), (max_r, max_c)) = app.effective_selected_range();
+        assert_eq!((min_r, min_c), (1, 1));
+        assert_eq!((max_r, max_c), (2, 2));
+    }
+
+    #[test]
+    fn test_spreadsheet_column_sorting_and_undo() {
+        let mut app = StudioApp::new();
+        app.active_doc = ActiveDocumentKind::Xlsx;
+        app.table_selected_cell = (1, 1); // Sort on Col 1: 1차 예산
+
+        // Before sort: Row 1 = 12500000, Row 2 = 18200000
+        assert_eq!(app.table_data[1][1], "12500000");
+        assert_eq!(app.table_data[2][1], "18200000");
+
+        // Sort descending
+        app.sort_selected_column(false);
+        assert_eq!(app.table_data[1][1], "18200000");
+        assert_eq!(app.table_data[2][1], "12500000");
+
+        // Sort ascending
+        app.sort_selected_column(true);
+        assert_eq!(app.table_data[1][1], "12500000");
+        assert_eq!(app.table_data[2][1], "18200000");
+
+        // Verify summary row remains at the end
+        assert!(app.table_data.last().unwrap()[0].contains("합계"));
+
+        // Undo
+        app.undo();
+        assert_eq!(app.table_data[1][1], "18200000");
+    }
+
+    #[test]
+    fn test_format_painter_and_presenter_notes() {
+        let mut app = StudioApp::new();
+
+        // 1. Format Painter
+        let sample_format = TextFormatState {
+            font_size: 20.0,
+            is_bold: true,
+            text_color: Color32::from_rgb(30, 64, 175),
+            align: egui::Align::Center,
+            ..Default::default()
+        };
+
+        app.format_state = sample_format.clone();
+        app.clipboard_format = Some(sample_format);
+        app.is_format_painter_active = true;
+        assert!(app.is_format_painter_active);
+
+        // 2. Presenter Notes on Slides
+        let pres = app.presentation_model.as_ref().expect("Presentation must exist");
+        assert_eq!(pres.slides.len(), 2);
+        assert!(!pres.slides[0].notes.is_empty(), "Slide 1 must have sample notes");
+        assert!(pres.slides[0].notes.contains("발표 팁"));
+    }
+
+    #[test]
+    fn test_pdf_freehand_signature_stamping_and_rotation() {
+        let mut app = StudioApp::new();
+        app.active_doc = ActiveDocumentKind::Pdf;
+
+        // Rotation
+        assert_eq!(app.pdf_widget.rotation_deg, 0.0);
+        app.pdf_widget.rotation_deg = 90.0;
+        assert_eq!(app.pdf_widget.rotation_deg, 90.0);
+
+        // Add freehand strokes
+        app.pdf_widget.freehand_strokes.push(vec![
+            [10.0, 10.0],
+            [20.0, 15.0],
+            [35.0, 25.0],
+            [50.0, 20.0],
+        ]);
+        let stamp_res = app.pdf_widget.stamp_freehand_signature_at(150.0, 650.0);
+        assert!(stamp_res.is_ok(), "Freehand stamping must succeed");
+        assert_eq!(app.pdf_widget.layer_stack.signatures().len(), 1);
+
+        let sig = &app.pdf_widget.layer_stack.signatures()[0];
+        assert!(matches!(sig.payload, oneoffice_pdf::SignaturePayload::BezierStrokes(_)));
+        assert_eq!(sig.rect_pt[0], 150.0);
+        assert_eq!(sig.rect_pt[1], 650.0);
     }
 }

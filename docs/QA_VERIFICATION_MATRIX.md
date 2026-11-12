@@ -38,6 +38,10 @@
 | **F-23** | Headless Offscreen Engine | 창 팝업 없는 순수 백그라운드 메모리 프레임버퍼 렌더러 (`egui_kittest` + `wgpu`) 기반 5대 포맷 100% 무결점 고해상도 PNG 캡처 | `✅ Verified` | Wave 3: Track G | `headless_screenshot.rs` (7종 실측 렌더링 0.16s 통과 & 126만 픽셀 검증) |
 | **F-24** | Parallel Heavy Stress | 1,000행 엑셀 수식·10회 HiDPI PDF 날인·50회 제안서 도식 컴파일·10회 DOCX/HWPX 패키징 병렬 스트레스 게이트 | `✅ Verified` | Wave 1-3 All | `stress_parallel_docs.rs` (4대 무거운 스레드 동시 완주 0.29s) |
 | **F-25** | In-Place Image Insertion | 인플레이스 고해상도 그림 자료(이미지) 삽입 및 DrawingML / OWPML BinData 패키징·삭제 HUD | `✅ Verified` | Wave 2: Track E | `test_in_place_insert_image` & `test_docx_save_with_table_and_image` |
+| **F-26** | Spreadsheet Range & Sort | 스프레드시트 셀 범위 다중 선택(`Shift+Click/Arrow`), 동적 집계 상태표시줄(`합계/평균/개수/최소/최대`), 오름/내림차순 열 정렬 | `✅ Verified` | Wave 2: Track E | `test_spreadsheet_range_selection_and_dynamic_statistics` & `test_spreadsheet_column_sorting_and_undo` |
+| **F-27** | Format Painter & Word Stats | 문서 서식 복사기(`📋 서식 복사`), 문단 서식 일괄 적용, 실시간 글자수/공백제외/단어수 통계 | `✅ Verified` | Wave 2: Track E | `test_format_painter_and_presenter_notes` & `show_status_bar` |
+| **F-28** | PDF Freehand & Rotation | PDF 마우스/스타일러스 자필 베지어 서명 패드(`✍ 자필 서명`), 부드러운 잉크 스트로크 날인, 90도 회전(`⟳ 회전`) | `✅ Verified` | Wave 1: Track D | `test_pdf_freehand_signature_stamping_and_rotation` & `stamp_freehand_signature_at` |
+| **F-29** | Presenter Notes | 슬라이드별 발표자 메모(Presenter Notes) 접이식 패널, 인플레이스 대본 편집 및 무손실 보존 | `✅ Verified` | Wave 2: Track E | `test_format_painter_and_presenter_notes` & `SlideItem.notes` |
 
 ---
 
