@@ -927,41 +927,59 @@ impl StudioApp {
             }
         }
 
-        ui.vertical(|ui| {
-            // 1. Top Header Glass Bar
-            self.show_header(ui);
-            ui.separator();
+        let chassis_bg = match self.theme {
+            StudioTheme::Dark => Color32::from_rgb(15, 23, 42),
+            StudioTheme::Light => Color32::from_rgb(248, 250, 252),
+        };
+        ui.painter().rect_filled(ui.max_rect(), 0.0, chassis_bg);
 
-            // 2. Format Ribbon Toolbar
-            self.show_ribbon_toolbar(ui);
-            ui.separator();
+        egui::Frame::new()
+            .fill(chassis_bg)
+            .inner_margin(egui::Margin::ZERO)
+            .show(ui, |ui| {
+                ui.set_min_width(ui.available_width());
+                ui.set_min_height(ui.available_height());
 
-            // 3. Find & Replace Glass Bar (when active)
-            self.show_find_replace_bar(ui);
+                ui.vertical(|ui| {
+                    // 1. Top Header Glass Bar
+                    self.show_header(ui);
+                    ui.separator();
 
-            // 4. Central Workspace Panel
-            egui::ScrollArea::both().show(ui, |ui| {
-                match self.active_doc {
-                    ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
-                        self.show_document_editor(ui);
-                    }
-                    ActiveDocumentKind::Xlsx => {
-                        self.show_spreadsheet_editor(ui);
-                    }
-                    ActiveDocumentKind::Pptx => {
-                        self.show_presentation_editor(ui);
-                    }
-                    ActiveDocumentKind::Pdf => {
-                        let ctx = ui.ctx().clone();
-                        self.pdf_widget.show(ui, &ctx);
-                    }
-                }
+                    // 2. Format Ribbon Toolbar
+                    self.show_ribbon_toolbar(ui);
+                    ui.separator();
+
+                    // 3. Find & Replace Glass Bar (when active)
+                    self.show_find_replace_bar(ui);
+
+                    // 4. Central Workspace Panel (expands to fill viewport above status bar)
+                    let remaining_h = (ui.available_height() - 32.0).max(100.0);
+                    egui::ScrollArea::both()
+                        .auto_shrink([false, false])
+                        .max_height(remaining_h)
+                        .show(ui, |ui| {
+                            match self.active_doc {
+                                ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
+                                    self.show_document_editor(ui);
+                                }
+                                ActiveDocumentKind::Xlsx => {
+                                    self.show_spreadsheet_editor(ui);
+                                }
+                                ActiveDocumentKind::Pptx => {
+                                    self.show_presentation_editor(ui);
+                                }
+                                ActiveDocumentKind::Pdf => {
+                                    let ctx = ui.ctx().clone();
+                                    self.pdf_widget.show(ui, &ctx);
+                                }
+                            }
+                        });
+
+                    ui.separator();
+                    // 5. Bottom Status Bar (anchored at bottom)
+                    self.show_status_bar(ui);
+                });
             });
-
-            ui.separator();
-            // 4. Bottom Status Bar
-            self.show_status_bar(ui);
-        });
     }
 
     /// Parses DOCX bytes into `doc_model` without requiring an egui context.
