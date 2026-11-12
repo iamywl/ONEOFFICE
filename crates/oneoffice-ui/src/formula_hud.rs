@@ -85,12 +85,14 @@ impl FormulaHudWidget {
             }
 
             // Quick action buttons
-            if ui.button("V").on_hover_text("수식 적용 (Enter)").clicked() {
+            let commit_label = RichText::new("✓").color(Color32::from_rgb(16, 185, 129)).strong();
+            if ui.button(commit_label).on_hover_text("수식 적용 (Enter)").clicked() {
                 event = FormulaHudEvent::Commit(self.formula_text.clone());
                 self.show_suggestions = false;
             }
 
-            if ui.button("X").on_hover_text("취소 (Esc)").clicked() {
+            let cancel_label = RichText::new("✕").color(Color32::from_rgb(239, 68, 68)).strong();
+            if ui.button(cancel_label).on_hover_text("취소 (Esc)").clicked() {
                 event = FormulaHudEvent::Cancel;
                 self.show_suggestions = false;
             }
@@ -99,28 +101,34 @@ impl FormulaHudWidget {
         // Autocompletion popup if typing an Excel formula
         if self.show_suggestions && self.formula_text.starts_with('=') {
             let prefix = self.formula_text[1..].trim().to_uppercase();
-            if !prefix.is_empty() {
-                let matches: Vec<&&str> = self
-                    .functions
+            let matches: Vec<&&str> = if prefix.is_empty() {
+                // Show common functions when just '=' is typed
+                self.functions
+                    .iter()
+                    .filter(|name| matches!(**name, "SUM" | "AVERAGE" | "COUNT" | "MAX" | "MIN" | "IF"))
+                    .take(6)
+                    .collect()
+            } else {
+                self.functions
                     .iter()
                     .filter(|name| name.starts_with(&prefix))
                     .take(6)
-                    .collect();
+                    .collect()
+            };
 
-                if !matches.is_empty() {
-                    ui.horizontal(|ui| {
-                        ui.label(RichText::new("함수 제안:").size(11.0).color(Color32::GRAY));
-                        for &&fn_name in &matches {
-                            if ui
-                                .button(RichText::new(fn_name).monospace().size(11.0))
-                                .clicked()
-                            {
-                                self.formula_text = format!("={fn_name}(");
-                                self.show_suggestions = false;
-                            }
+            if !matches.is_empty() {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new("함수 제안:").size(11.0).color(Color32::GRAY));
+                    for &&fn_name in &matches {
+                        if ui
+                            .button(RichText::new(fn_name).monospace().size(11.0))
+                            .clicked()
+                        {
+                            self.formula_text = format!("={fn_name}(");
+                            self.show_suggestions = false;
                         }
-                    });
-                }
+                    }
+                });
             }
         }
 

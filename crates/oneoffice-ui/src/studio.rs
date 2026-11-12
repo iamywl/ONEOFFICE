@@ -158,6 +158,7 @@ pub struct FindReplaceState {
     pub is_open: bool,
     pub find_query: String,
     pub replace_query: String,
+    pub match_case: bool,
     pub status: String,
 }
 
@@ -500,6 +501,95 @@ impl StudioApp {
         }
     }
 
+    /// Calculates column maximum and appends a MAX summary row to the spreadsheet.
+    pub fn calculate_selected_column_max(&mut self) {
+        let (_, c) = self.table_selected_cell;
+        let mut max_val: Option<f64> = None;
+        for row in &self.table_data {
+            if let Some(cell) = row.get(c) {
+                let clean = cell.trim().replace(['₩', ',', '%', ' '], "");
+                if let Ok(v) = clean.parse::<f64>() {
+                    max_val = Some(max_val.map_or(v, |m| m.max(v)));
+                }
+            }
+        }
+        if let Some(m) = max_val {
+            self.push_undo_snapshot();
+            let col_count = self.table_data.first().map_or(4, |r| r.len());
+            let mut new_row = vec![String::new(); col_count];
+            if !new_row.is_empty() {
+                new_row[0] = "최댓값 (MAX)".to_string();
+            }
+            if c < new_row.len() {
+                new_row[c] = Self::format_with_commas(m as i64);
+            }
+            self.table_data.push(new_row);
+            self.is_dirty = true;
+            let col_ch = if c < 26 { (b'A' + c as u8) as char } else { '?' };
+            self.status_text = format!("{col_ch}열 최댓값: {} 계산 완료", Self::format_with_commas(m as i64));
+        }
+    }
+
+    /// Calculates column minimum and appends a MIN summary row to the spreadsheet.
+    pub fn calculate_selected_column_min(&mut self) {
+        let (_, c) = self.table_selected_cell;
+        let mut min_val: Option<f64> = None;
+        for row in &self.table_data {
+            if let Some(cell) = row.get(c) {
+                let clean = cell.trim().replace(['₩', ',', '%', ' '], "");
+                if let Ok(v) = clean.parse::<f64>() {
+                    min_val = Some(min_val.map_or(v, |m| m.min(v)));
+                }
+            }
+        }
+        if let Some(m) = min_val {
+            self.push_undo_snapshot();
+            let col_count = self.table_data.first().map_or(4, |r| r.len());
+            let mut new_row = vec![String::new(); col_count];
+            if !new_row.is_empty() {
+                new_row[0] = "최솟값 (MIN)".to_string();
+            }
+            if c < new_row.len() {
+                new_row[c] = Self::format_with_commas(m as i64);
+            }
+            self.table_data.push(new_row);
+            self.is_dirty = true;
+            let col_ch = if c < 26 { (b'A' + c as u8) as char } else { '?' };
+            self.status_text = format!("{col_ch}열 최솟값: {} 계산 완료", Self::format_with_commas(m as i64));
+        }
+    }
+
+    /// Calculates non-empty cell count in selected column and appends a COUNT row.
+    pub fn calculate_selected_column_count(&mut self) {
+        let (_, c) = self.table_selected_cell;
+        let mut count = 0usize;
+        for (i, row) in self.table_data.iter().enumerate() {
+            if i == 0 {
+                continue;
+            }
+            if let Some(cell) = row.get(c)
+                && !cell.trim().is_empty()
+            {
+                count += 1;
+            }
+        }
+        if count > 0 {
+            self.push_undo_snapshot();
+            let col_count = self.table_data.first().map_or(4, |r| r.len());
+            let mut new_row = vec![String::new(); col_count];
+            if !new_row.is_empty() {
+                new_row[0] = "개수 (COUNT)".to_string();
+            }
+            if c < new_row.len() {
+                new_row[c] = count.to_string();
+            }
+            self.table_data.push(new_row);
+            self.is_dirty = true;
+            let col_ch = if c < 26 { (b'A' + c as u8) as char } else { '?' };
+            self.status_text = format!("{col_ch}열 데이터 개수: {count}건 계산 완료");
+        }
+    }
+
     /// Pushes a snapshot of the active document state to the undo history stack.
     pub fn push_undo_snapshot(&mut self) {
         let snapshot = match self.active_doc {
@@ -594,6 +684,15 @@ impl StudioApp {
             return;
         }
 
+        let match_case = self.find_replace.match_case;
+        let contains_q = |text: &str| -> bool {
+            if match_case {
+                text.contains(&q)
+            } else {
+                text.to_lowercase().contains(&q.to_lowercase())
+            }
+        };
+
         match self.active_doc {
             ActiveDocumentKind::Hwpx | ActiveDocumentKind::Docx => {
                 if let Some(doc) = &self.doc_model {
@@ -601,7 +700,7 @@ impl StudioApp {
                     let mut found = None;
                     for i in 0..doc.paragraphs.len() {
                         let idx = (start_idx + i) % doc.paragraphs.len();
-                        if doc.paragraphs[idx].text.contains(&q) {
+                        if contains_q(&doc.paragraphs[idx].text) {
                             found = Some(idx);
                             break;
                         }
@@ -619,7 +718,7 @@ impl StudioApp {
                 let (cur_r, cur_c) = self.table_selected_cell;
                 for r in 0..self.table_data.len() {
                     for c in 0..self.table_data[r].len() {
-                        if (r > cur_r || (r == cur_r && c > cur_c)) && self.table_data[r][c].contains(&q) {
+                        if (r > cur_r || (r == cur_r && c > cur_c)) && contains_q(&self.table_data[r][c]) {
                             found = Some((r, c));
                             break;
                         }
@@ -631,7 +730,7 @@ impl StudioApp {
                 if found.is_none() {
                     for r in 0..self.table_data.len() {
                         for c in 0..self.table_data[r].len() {
-                            if self.table_data[r][c].contains(&q) {
+                            if contains_q(&self.table_data[r][c]) {
                                 found = Some((r, c));
                                 break;
                             }
@@ -657,7 +756,7 @@ impl StudioApp {
                     for i in 0..pres.slides.len() {
                         let idx = (start + i) % pres.slides.len();
                         let s = &pres.slides[idx];
-                        if s.title.contains(&q) || s.bullet_points.iter().any(|b| b.contains(&q)) {
+                        if contains_q(&s.title) || s.bullet_points.iter().any(|b| contains_q(b)) {
                             found = Some(idx);
                             break;
                         }
@@ -1999,11 +2098,20 @@ impl StudioApp {
 
                     ui.separator();
 
-                    if ui.button("∑ 합계 (SUM)").on_hover_text("선택 열 합계 자동 계산 및 행 추가").clicked() {
+                    if ui.button("∑ 합계").on_hover_text("선택 열 합계 (SUM) 자동 계산 및 행 추가").clicked() {
                         self.calculate_selected_column_sum();
                     }
-                    if ui.button("x̄ 평균 (AVG)").on_hover_text("선택 열 평균 계산").clicked() {
+                    if ui.button("x̄ 평균").on_hover_text("선택 열 평균 (AVG) 계산").clicked() {
                         self.calculate_selected_column_average();
+                    }
+                    if ui.button("↑ 최대").on_hover_text("선택 열 최댓값 (MAX) 계산").clicked() {
+                        self.calculate_selected_column_max();
+                    }
+                    if ui.button("↓ 최소").on_hover_text("선택 열 최솟값 (MIN) 계산").clicked() {
+                        self.calculate_selected_column_min();
+                    }
+                    if ui.button("# 개수").on_hover_text("선택 열 데이터 개수 (COUNT) 계산").clicked() {
+                        self.calculate_selected_column_count();
                     }
 
                     ui.separator();
@@ -2208,6 +2316,8 @@ impl StudioApp {
             if ui.button("다음 찾기").clicked() {
                 self.perform_find_next();
             }
+
+            ui.checkbox(&mut self.find_replace.match_case, "대소문자");
 
             if ui.button("바꾸기").clicked() {
                 self.push_undo_snapshot();
@@ -3367,6 +3477,9 @@ impl StudioApp {
                         ui.label(RichText::new("슬라이드 목록").strong().size(12.0));
                         ui.add_space(4.0);
 
+                        let mut move_up_idx = None;
+                        let mut move_down_idx = None;
+                        let mut duplicate_idx = None;
                         let mut delete_slide_idx = None;
                         let total_slides = model.slides.len();
 
@@ -3405,8 +3518,8 @@ impl StudioApp {
                                                     Color32::from_rgb(148, 163, 184)
                                                 }),
                                         );
-                                        let title_short = if slide.title.chars().count() > 10 {
-                                            let s: String = slide.title.chars().take(10).collect();
+                                        let title_short = if slide.title.chars().count() > 8 {
+                                            let s: String = slide.title.chars().take(8).collect();
                                             format!("{s}...")
                                         } else {
                                             slide.title.clone()
@@ -3426,6 +3539,15 @@ impl StudioApp {
                                             model.active_slide_index = idx;
                                         }
 
+                                        if idx > 0 && ui.small_button("▲").on_hover_text("위로 이동").clicked() {
+                                            move_up_idx = Some(idx);
+                                        }
+                                        if idx + 1 < total_slides && ui.small_button("▼").on_hover_text("아래로 이동").clicked() {
+                                            move_down_idx = Some(idx);
+                                        }
+                                        if ui.small_button("⧉").on_hover_text("슬라이드 복제").clicked() {
+                                            duplicate_idx = Some(idx);
+                                        }
                                         if total_slides > 1
                                             && ui.small_button("✕").on_hover_text("슬라이드 삭제").clicked()
                                         {
@@ -3436,6 +3558,32 @@ impl StudioApp {
                             ui.add_space(4.0);
                         }
 
+                        if let Some(up) = move_up_idx
+                            && up > 0
+                        {
+                            model.slides.swap(up, up - 1);
+                            for (i, s) in model.slides.iter_mut().enumerate() { s.slide_number = i + 1; }
+                            model.active_slide_index = up - 1;
+                            self.is_dirty = true;
+                        }
+                        if let Some(down) = move_down_idx
+                            && down + 1 < model.slides.len()
+                        {
+                            model.slides.swap(down, down + 1);
+                            for (i, s) in model.slides.iter_mut().enumerate() { s.slide_number = i + 1; }
+                            model.active_slide_index = down + 1;
+                            self.is_dirty = true;
+                        }
+                        if let Some(dup_idx) = duplicate_idx
+                            && let Some(cur) = model.slides.get(dup_idx).cloned()
+                        {
+                            let mut copy = cur;
+                            copy.title = format!("{} (사본)", copy.title);
+                            model.slides.insert(dup_idx + 1, copy);
+                            for (i, s) in model.slides.iter_mut().enumerate() { s.slide_number = i + 1; }
+                            model.active_slide_index = dup_idx + 1;
+                            self.is_dirty = true;
+                        }
                         if let Some(del_idx) = delete_slide_idx {
                             model.slides.remove(del_idx);
                             for (i, s) in model.slides.iter_mut().enumerate() {

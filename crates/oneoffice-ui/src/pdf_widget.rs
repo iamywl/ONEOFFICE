@@ -194,9 +194,27 @@ impl PdfViewerWidget {
 
             ui.separator();
 
-            // Seal Label Customizer
+            // Seal Label Customizer & Presets
             ui.label("직인 문구:");
-            ui.add(egui::TextEdit::singleline(&mut self.seal_label).desired_width(140.0));
+            ui.add(egui::TextEdit::singleline(&mut self.seal_label).desired_width(120.0));
+
+            egui::ComboBox::from_id_salt("pdf_seal_preset_dropdown")
+                .selected_text("프리셋")
+                .width(75.0)
+                .show_ui(ui, |ui| {
+                    if ui.selectable_label(self.seal_label.contains("대표이사"), "대표이사 직인").clicked() {
+                        self.seal_label = "대표이사\n원오피스".to_string();
+                    }
+                    if ui.selectable_label(self.seal_label.contains("홍길동"), "개인 인영").clicked() {
+                        self.seal_label = "홍길동\n(인)".to_string();
+                    }
+                    if ui.selectable_label(self.seal_label.contains("APPROVED"), "승인/결재인").clicked() {
+                        self.seal_label = "결재승인\nAPPROVED".to_string();
+                    }
+                    if ui.selectable_label(self.seal_label.contains("간인"), "문서 간인").clicked() {
+                        self.seal_label = "간인\nONEOFFICE".to_string();
+                    }
+                });
 
             // Seal stamping actions
             if ui.button("(인) 앵커 자동 날인").clicked()

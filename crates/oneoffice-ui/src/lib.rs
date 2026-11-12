@@ -454,4 +454,32 @@ mod tests {
         app.find_replace.is_open = false;
         assert!(!app.find_replace.is_open);
     }
+
+    #[test]
+    fn test_spreadsheet_statistical_calculations_and_search_options() {
+        let mut app = StudioApp::new();
+        let initial_rows = app.table_data.len();
+
+        app.calculate_selected_column_max();
+        assert_eq!(app.table_data.len(), initial_rows + 1);
+        let max_row = app.table_data.last().expect("max row must exist");
+        assert_eq!(max_row[0], "최댓값 (MAX)");
+
+        app.calculate_selected_column_min();
+        assert_eq!(app.table_data.len(), initial_rows + 2);
+        let min_row = app.table_data.last().expect("min row must exist");
+        assert_eq!(min_row[0], "최솟값 (MIN)");
+
+        app.calculate_selected_column_count();
+        assert_eq!(app.table_data.len(), initial_rows + 3);
+        let count_row = app.table_data.last().expect("count row must exist");
+        assert_eq!(count_row[0], "개수 (COUNT)");
+
+        // Search case-sensitivity check on spreadsheet mode
+        app.active_doc = ActiveDocumentKind::Xlsx;
+        app.find_replace.find_query = "클라우드".to_string();
+        app.find_replace.match_case = true;
+        app.perform_find_next();
+        assert!(app.find_replace.status.contains("일치"));
+    }
 }

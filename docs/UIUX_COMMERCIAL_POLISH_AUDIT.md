@@ -64,6 +64,31 @@
 - `packaging/build-desktop.sh macos-dmg` 신설:
   - `ONEOFFICE.app` 애플리케이션 번들(CFDocumentTypes 연동, AppIcon 포함)과 `/Applications` 심볼릭 링크를 수납한 17MB 압축 UDZO 배포용 DMG 인스톨러 생성 및 마운트 검증 완료.
 
+### 2.7 Formula HUD 액션 아이콘 및 수식 추천 엔진 고도화
+- `crates/oneoffice-ui/src/formula_hud.rs`:
+  - ASCII 텍스트 `V`, `X` 버튼을 세련된 에메랄드 그린 `✓` (적용) 및 크림슨 레드 `✕` (취소) 아이콘 버튼으로 교체.
+  - `= ` 입력 시 513 함수 중 실무 최다 사용 6대 공통 함수(`SUM`, `AVERAGE`, `COUNT`, `MAX`, `MIN`, `IF`) 즉각 추천 뱃지 노출.
+
+### 2.8 스프레드시트 5대 통계 집계 엔진 및 서식 확장
+- `crates/oneoffice-ui/src/studio.rs`:
+  - `calculate_selected_column_max`: 선택 열 최댓값(MAX) 자동 산출 및 요약 행 추가.
+  - `calculate_selected_column_min`: 선택 열 최솟값(MIN) 자동 산출 및 요약 행 추가.
+  - `calculate_selected_column_count`: 선택 열 비어있지 않은 유효 데이터 개수(COUNT) 집계 행 추가.
+  - 리본 툴바에 `↑ 최대`, `↓ 최소`, `# 개수` 원클릭 단축 버튼 신설.
+
+### 2.9 프레젠테이션 슬라이드 순서 재배치 및 1클릭 복제
+- `crates/oneoffice-ui/src/studio.rs`:
+  - 슬라이드 썸네일 카드 내 `▲` (위로 이동), `▼` (아래로 이동) 원클릭 순서 재배치 인터랙션 지원.
+  - `⧉` 슬라이드 복제 버튼 및 `✕` 삭제 안전 처리.
+
+### 2.10 전자직인 4대 프리셋 시스템
+- `crates/oneoffice-ui/src/pdf_widget.rs`:
+  - `대표이사 직인` (`대표이사\n원오피스`), `개인 인영` (`홍길동\n(인)`), `결재/승인인` (`결재승인\nAPPROVED`), `문서 간인` (`간인\nONEOFFICE`) 4대 직인 프리셋 드롭다운 즉각 선택 지원.
+
+### 2.11 대화형 찾기/바꾸기 대소문자 매칭 옵션
+- `crates/oneoffice-ui/src/studio.rs`:
+  - `FindReplaceState` 내 `match_case` 토글 체크박스 장착으로 대소문자 구분 및 비구분 유연 검색 지원.
+
 ---
 
 ## 3. 52종 전 기능 실측 스크린샷 갤러리 검증 결과
@@ -89,7 +114,7 @@
 
 1. **Rust Workspace 컴파일**: 0 errors
 2. **Clippy 린트 검사**: `cargo clippy --workspace --all-targets -- -D warnings` (0 warnings)
-3. **Rust 자동화 테스트**: 121개 전수 통과 (0 failed, 0 panic)
+3. **Rust 자동화 테스트**: 122개 전수 통과 (0 failed, 0 panic)
 4. **hanul-hwpx 단위 테스트**: 37개 전수 통과 (0 failed)
 5. **문서 무결성 하네스**: `node scripts/qa/verify-readme.mjs && node scripts/qa/doc_harness.mjs` (100% 통과, 0 warnings)
 6. **추적 매트릭스 (`QA_VERIFICATION_MATRIX.md`)**: **F-01부터 F-25까지 25개 전 핵심 기능 `✅ Verified` 100% 달성**
